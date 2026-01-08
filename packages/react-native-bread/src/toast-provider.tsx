@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
-import { ToastContainer } from "./Toast";
+import { ToastContainer } from "./toast";
 
 interface ToastProviderProps {
   children: ReactNode;
