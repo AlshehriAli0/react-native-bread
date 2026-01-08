@@ -1,14 +1,62 @@
-import type { Toast, ToastState, ToastType } from "./types";
+import type { Toast, ToastConfig, ToastState, ToastTheme, ToastType, ToastTypeColors } from "./types";
 
 export type Listener = (state: ToastState) => void;
 
 const MAX_VISIBLE_TOASTS = 3;
 const EXIT_DURATION = 350;
 
+/** Default theme values */
+const DEFAULT_THEME: ToastTheme = {
+  position: "top",
+  offset: 0,
+  stacking: true,
+  colors: {
+    success: { accent: "#28B770", background: "#FFFFFF" },
+    error: { accent: "#F05964", background: "#FFFFFF" },
+    info: { accent: "#EDBE43", background: "#FFFFFF" },
+    loading: { accent: "#232323", background: "#FFFFFF" },
+  },
+  toastStyle: {},
+  titleStyle: {},
+  descriptionStyle: {},
+  defaultDuration: 4000,
+};
+
+/** Deep merge user config with defaults */
+function mergeConfig(config: ToastConfig | undefined): ToastTheme {
+  if (!config) return DEFAULT_THEME;
+
+  const mergedColors = { ...DEFAULT_THEME.colors };
+  if (config.colors) {
+    for (const type of Object.keys(config.colors) as ToastType[]) {
+      const userColors = config.colors[type];
+      if (userColors) {
+        mergedColors[type] = {
+          ...DEFAULT_THEME.colors[type],
+          ...userColors,
+        } as ToastTypeColors;
+      }
+    }
+  }
+
+  return {
+    position: config.position ?? DEFAULT_THEME.position,
+    offset: config.offset ?? DEFAULT_THEME.offset,
+    stacking: config.stacking ?? DEFAULT_THEME.stacking,
+    colors: mergedColors,
+    toastStyle: { ...DEFAULT_THEME.toastStyle, ...config.toastStyle },
+    titleStyle: { ...DEFAULT_THEME.titleStyle, ...config.titleStyle },
+    descriptionStyle: { ...DEFAULT_THEME.descriptionStyle, ...config.descriptionStyle },
+    defaultDuration: config.defaultDuration ?? DEFAULT_THEME.defaultDuration,
+  };
+}
+
 class ToastStore {
   private state: ToastState = {
     visibleToasts: [],
   };
+
+  private theme: ToastTheme = DEFAULT_THEME;
 
   private listeners = new Set<Listener>();
   private toastIdCounter = 0;
@@ -34,40 +82,63 @@ class ToastStore {
 
   getState = () => this.state;
 
-  show = (title: string, description?: string, type: ToastType = "success", duration = 4000): string => {
+  getTheme = () => this.theme;
+
+  setConfig = (config: ToastConfig | undefined) => {
+    this.theme = mergeConfig(config);
+  };
+
+  show = (title: string, description?: string, type: ToastType = "success", duration?: number): string => {
+    const actualDuration = duration ?? this.theme.defaultDuration;
+    const maxToasts = this.theme.stacking ? MAX_VISIBLE_TOASTS : 1;
+
     const id = `toast-${++this.toastIdCounter}`;
     const newToast: Toast = {
       id,
       title,
       description,
       type,
-      duration,
+      duration: actualDuration,
       createdAt: Date.now(),
       isExiting: false,
     };
 
     let { visibleToasts } = this.state;
 
-    // If we already have max toasts, remove the oldest immediately (no emit yet)
-    if (visibleToasts.length >= MAX_VISIBLE_TOASTS) {
-      const oldestToast = visibleToasts[visibleToasts.length - 1];
-      if (oldestToast) {
-        const timeout = this.timeouts.get(oldestToast.id);
+    // Get only non-exiting toasts for count
+    const activeToasts = visibleToasts.filter(t => !t.isExiting);
+
+    if (activeToasts.length >= maxToasts) {
+      // Mark excess toasts as exiting (animate out) instead of removing immediately
+      const toastsToExit = activeToasts.slice(maxToasts - 1);
+      for (const toast of toastsToExit) {
+        // Clear auto-dismiss timeout
+        const timeout = this.timeouts.get(toast.id);
         if (timeout) {
           clearTimeout(timeout);
-          this.timeouts.delete(oldestToast.id);
+          this.timeouts.delete(toast.id);
         }
-        visibleToasts = visibleToasts.filter(t => t.id !== oldestToast.id);
+      }
+
+      // Mark them as exiting
+      const exitingIds = new Set(toastsToExit.map(t => t.id));
+      visibleToasts = visibleToasts.map(t => (exitingIds.has(t.id) ? { ...t, isExiting: true } : t));
+
+      // Schedule removal after exit animation
+      for (const toast of toastsToExit) {
+        setTimeout(() => {
+          this.removeToast(toast.id);
+        }, EXIT_DURATION);
       }
     }
 
-    // Add new toast and emit once
+    // Add new toast
     this.setState({
-      visibleToasts: [newToast, ...visibleToasts.slice(0, MAX_VISIBLE_TOASTS - 1)],
+      visibleToasts: [newToast, ...visibleToasts],
     });
 
     // Schedule auto-dismiss with duration multiplier based on position
-    this.scheduleTimeout(id, duration, 0);
+    this.scheduleTimeout(id, actualDuration, 0);
 
     // Reschedule timeouts for other toasts based on their new positions
     this.rescheduleAllTimeouts();

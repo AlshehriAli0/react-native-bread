@@ -1,14 +1,11 @@
+import { Link } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { toast } from "react-native-bread";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-export default function HomeScreen() {
-  const insets = useSafeAreaInsets();
-
+export default function DefaultScreen() {
   const handlePromiseToast = () => {
     const fakeApiCall = new Promise<{ message: string }>((resolve, reject) => {
       setTimeout(() => {
-        // Randomly succeed or fail for demo purposes
         if (Math.random() > 0.5) {
           resolve({ message: "Data loaded!" });
         } else {
@@ -25,36 +22,34 @@ export default function HomeScreen() {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 20 }]}>
-      <Text style={styles.title}>🍞 React Native Bread</Text>
-      <Text style={styles.subtitle}>
-        A delicious toast library for React Native with beautiful animations and gesture support
-      </Text>
+    <View style={styles.container}>
+      <Text style={styles.title}>Default Config</Text>
+      <Text style={styles.subtitle}>Top position, stacking enabled, default colors</Text>
 
       <View style={styles.buttonsContainer}>
         <Pressable
           style={[styles.button, styles.successButton]}
-          onPress={() => toast.success("Operation completed!", "Your changes have been saved")}
+          onPress={() => toast.success("Success!", "Your changes have been saved")}
         >
           <Text style={styles.buttonText}>Success Toast</Text>
         </Pressable>
 
         <Pressable
           style={[styles.button, styles.errorButton]}
-          onPress={() => toast.error("Something went wrong!", "Please try again later")}
+          onPress={() => toast.error("Error!", "Something went wrong")}
         >
           <Text style={styles.buttonText}>Error Toast</Text>
         </Pressable>
 
         <Pressable
           style={[styles.button, styles.infoButton]}
-          onPress={() => toast.info("Did you know?", "Swipe up to dismiss this toast")}
+          onPress={() => toast.info("Info", "Swipe up to dismiss")}
         >
           <Text style={styles.buttonText}>Info Toast</Text>
         </Pressable>
 
         <Pressable style={[styles.button, styles.promiseButton]} onPress={handlePromiseToast}>
-          <Text style={styles.buttonText}>Promise Toast (Loading → Result)</Text>
+          <Text style={styles.buttonText}>Promise Toast</Text>
         </Pressable>
 
         <Pressable
@@ -68,6 +63,12 @@ export default function HomeScreen() {
           <Text style={styles.buttonText}>Stack 3 Toasts</Text>
         </Pressable>
       </View>
+
+      <Link href="/(custom)" asChild>
+        <Pressable style={styles.navButton}>
+          <Text style={styles.navButtonText}>View Custom Config →</Text>
+        </Pressable>
+      </Link>
     </View>
   );
 }
@@ -77,37 +78,33 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f5f5f5",
     paddingHorizontal: 20,
+    paddingTop: 20,
   },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: "bold",
     textAlign: "center",
-    marginBottom: 8,
+    marginBottom: 4,
     color: "#1f2937",
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     textAlign: "center",
-    marginBottom: 40,
+    marginBottom: 30,
     color: "#6b7280",
   },
   buttonsContainer: {
-    gap: 16,
+    gap: 12,
   },
   button: {
-    paddingVertical: 16,
+    paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 12,
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
   buttonText: {
     color: "#fff",
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "600",
   },
   successButton: {
@@ -124,5 +121,17 @@ const styles = StyleSheet.create({
   },
   stackButton: {
     backgroundColor: "#f59e0b",
+  },
+  navButton: {
+    marginTop: 30,
+    paddingVertical: 16,
+    backgroundColor: "#1f2937",
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  navButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });

@@ -15,6 +15,9 @@ export type {
   PromiseMessages,
   PromiseResult,
   Toast,
+  ToastConfig,
+  ToastPosition,
   ToastState,
   ToastType,
+  ToastTypeColors,
 } from "./types";

@@ -13,30 +13,24 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
 import { CloseIcon, GreenCheck, InfoIcon, RedX } from "./icons";
 import { type Toast as ToastData, type ToastState, type ToastType, toastStore } from "./toast-store";
+import type { ToastPosition, ToastTheme } from "./types";
 
-const TOAST_VARIANT_COLORS = {
-  loading: "#232323",
-  success: "#28B770",
-  error: "#F05964",
-  info: "#EDBE43",
-} as const;
-
-const ToastIcon = ({ type }: { type: ToastType }) => {
+const ToastIcon = ({ type, accentColor }: { type: ToastType; accentColor: string }) => {
   switch (type) {
     case "success":
-      return <GreenCheck width={36} height={36} />;
+      return <GreenCheck width={36} height={36} fill={accentColor} />;
     case "error":
-      return <RedX width={28} height={28} />;
+      return <RedX width={28} height={28} fill={accentColor} />;
     case "loading":
-      return <ActivityIndicator size={28} color="#232323" />;
+      return <ActivityIndicator size={28} color={accentColor} />;
     case "info":
-      return <InfoIcon width={28} height={28} fill="#EDBE43" />;
+      return <InfoIcon width={28} height={28} fill={accentColor} />;
     default:
-      return <GreenCheck width={36} height={36} />;
+      return <GreenCheck width={36} height={36} fill={accentColor} />;
   }
 };
 
-const AnimatedIcon = ({ type }: { type: ToastType }) => {
+const AnimatedIcon = ({ type, accentColor }: { type: ToastType; accentColor: string }) => {
   const progress = useSharedValue(0);
 
   useEffect(() => {
@@ -50,7 +44,7 @@ const AnimatedIcon = ({ type }: { type: ToastType }) => {
 
   return (
     <Animated.View style={style}>
-      <ToastIcon type={type} />
+      <ToastIcon type={type} accentColor={accentColor} />
     </Animated.View>
   );
 };
@@ -58,14 +52,17 @@ const AnimatedIcon = ({ type }: { type: ToastType }) => {
 // singleton instance
 export const ToastContainer = () => {
   const [visibleToasts, setVisibleToasts] = useState<ToastData[]>([]);
-  const { top } = useSafeAreaInsets();
+  const [theme, setTheme] = useState<ToastTheme>(() => toastStore.getTheme());
+  const { top, bottom } = useSafeAreaInsets();
 
   useEffect(() => {
     const initialState = toastStore.getState();
     setVisibleToasts(initialState.visibleToasts);
+    setTheme(toastStore.getTheme());
 
     return toastStore.subscribe((state: ToastState) => {
       setVisibleToasts(state.visibleToasts);
+      setTheme(toastStore.getTheme());
     });
   }, []);
 
@@ -89,11 +86,15 @@ export const ToastContainer = () => {
     return null;
   }
 
+  const isBottom = theme.position === "bottom";
+  const inset = isBottom ? bottom : top;
+  const positionStyle = isBottom ? { bottom: inset + theme.offset + 2 } : { top: inset + theme.offset + 2 };
+
   return (
-    <View style={[styles.container, { top: top + 2 }]} pointerEvents="box-none">
+    <View style={[styles.container, positionStyle]} pointerEvents="box-none">
       {reversedToasts.map(toast => {
         const index = toast.isExiting ? -1 : getVisualIndex(toast.id);
-        return <MemoizedToastItem key={toast.id} toast={toast} index={index} />;
+        return <MemoizedToastItem key={toast.id} toast={toast} index={index} theme={theme} position={theme.position} />;
       })}
     </View>
   );
@@ -102,28 +103,34 @@ export const ToastContainer = () => {
 interface ToastItemProps {
   toast: ToastData;
   index: number;
+  theme: ToastTheme;
+  position: ToastPosition;
 }
 
 const EASING = Easing.bezier(0.25, 0.1, 0.25, 1.0);
-const FromY = -80;
 const ToY = 0;
 const Duration = 400;
 const ExitDuration = 350;
 const MaxDragDown = 60;
 
-const ToastItem = ({ toast, index }: ToastItemProps) => {
+const ToastItem = ({ toast, index, theme, position }: ToastItemProps) => {
   const progress = useSharedValue(0);
   const translationY = useSharedValue(0);
   const isBeingDragged = useSharedValue(false);
   const shouldDismiss = useSharedValue(false);
+
+  // Position-based animation values
+  const isBottom = position === "bottom";
+  const entryFromY = isBottom ? 80 : -80;
+  const exitToY = isBottom ? 100 : -100;
 
   // Stack position animation
   const stackIndex = useSharedValue(index);
 
   // Title color animation on variant change
   const colorProgress = useSharedValue(1);
-  const fromColor = useSharedValue(TOAST_VARIANT_COLORS[toast.type]);
-  const toColor = useSharedValue(TOAST_VARIANT_COLORS[toast.type]);
+  const fromColor = useSharedValue(theme.colors[toast.type].accent);
+  const toColor = useSharedValue(theme.colors[toast.type].accent);
 
   // Refs for tracking previous values to avoid unnecessary animations
   const lastHandledType = useRef(toast.type);
@@ -141,13 +148,13 @@ const ToastItem = ({ toast, index }: ToastItemProps) => {
     // Exit animation when isExiting becomes true
     if (toast.isExiting) {
       progress.value = withTiming(0, { duration: ExitDuration, easing: EASING });
-      translationY.value = withTiming(-100, { duration: ExitDuration, easing: EASING });
+      translationY.value = withTiming(exitToY, { duration: ExitDuration, easing: EASING });
     }
 
     // Color transition when type changes
     if (toast.type !== lastHandledType.current) {
-      fromColor.value = TOAST_VARIANT_COLORS[lastHandledType.current];
-      toColor.value = TOAST_VARIANT_COLORS[toast.type];
+      fromColor.value = theme.colors[lastHandledType.current].accent;
+      toColor.value = theme.colors[toast.type].accent;
       lastHandledType.current = toast.type;
       colorProgress.value = 0;
       colorProgress.value = withTiming(1, { duration: 300, easing: EASING });
@@ -158,7 +165,19 @@ const ToastItem = ({ toast, index }: ToastItemProps) => {
       stackIndex.value = withTiming(index, { duration: 300, easing: EASING });
       prevIndex.current = index;
     }
-  }, [toast.isExiting, toast.type, index, progress, translationY, fromColor, toColor, colorProgress, stackIndex]);
+  }, [
+    toast.isExiting,
+    toast.type,
+    index,
+    progress,
+    translationY,
+    fromColor,
+    toColor,
+    colorProgress,
+    stackIndex,
+    exitToY,
+    theme.colors,
+  ]);
 
   const titleColorStyle = useAnimatedStyle(() => ({
     color: interpolateColor(colorProgress.value, [0, 1], [fromColor.value, toColor.value]),
@@ -177,16 +196,24 @@ const ToastItem = ({ toast, index }: ToastItemProps) => {
     .onUpdate(event => {
       "worklet";
       const rawY = event.translationY;
+      // For top: negative Y = dismiss direction, positive Y = resistance
+      // For bottom: positive Y = dismiss direction, negative Y = resistance
+      const dismissDrag = isBottom ? rawY : -rawY;
+      const resistDrag = isBottom ? -rawY : rawY;
 
-      if (rawY < 0) {
-        translationY.value = Math.max(rawY, -180);
-        if (rawY < -40 || event.velocityY < -300) {
+      if (dismissDrag > 0) {
+        // Moving toward dismiss direction
+        const clampedY = isBottom ? Math.min(rawY, 180) : Math.max(rawY, -180);
+        translationY.value = clampedY;
+        if (dismissDrag > 40 || (isBottom ? event.velocityY > 300 : event.velocityY < -300)) {
           shouldDismiss.value = true;
         }
       } else {
-        // Exponential resistance: gets slower the further you drag
-        const exponentialDrag = MaxDragDown * (1 - Math.exp(-rawY / 250));
-        translationY.value = Math.min(exponentialDrag, MaxDragDown);
+        // Moving away from edge - apply resistance
+        const exponentialDrag = MaxDragDown * (1 - Math.exp(-resistDrag / 250));
+        translationY.value = isBottom
+          ? -Math.min(exponentialDrag, MaxDragDown)
+          : Math.min(exponentialDrag, MaxDragDown);
         shouldDismiss.value = false;
       }
     })
@@ -199,7 +226,8 @@ const ToastItem = ({ toast, index }: ToastItemProps) => {
           duration: ExitDuration,
           easing: EASING,
         });
-        translationY.value = withTiming(translationY.value - 200, {
+        const exitOffset = isBottom ? 200 : -200;
+        translationY.value = withTiming(translationY.value + exitOffset, {
           duration: ExitDuration,
           easing: EASING,
         });
@@ -213,10 +241,10 @@ const ToastItem = ({ toast, index }: ToastItemProps) => {
     });
 
   const animatedStyle = useAnimatedStyle(() => {
-    const baseTranslateY = interpolate(progress.value, [0, 1], [FromY, ToY]);
+    const baseTranslateY = interpolate(progress.value, [0, 1], [entryFromY, ToY]);
 
-    // Stack offset: each toast behind moves up by 10px
-    const stackOffsetY = stackIndex.value * -10;
+    // Stack offset: each toast behind moves away from edge (up for top, down for bottom)
+    const stackOffsetY = isBottom ? stackIndex.value * 10 : stackIndex.value * -10;
 
     // Stack scale: each toast behind scales down by 0.05
     const stackScale = 1 - stackIndex.value * 0.05;
@@ -224,7 +252,9 @@ const ToastItem = ({ toast, index }: ToastItemProps) => {
     const finalTranslateY = baseTranslateY + translationY.value + stackOffsetY;
 
     const progressOpacity = interpolate(progress.value, [0, 1], [0, 1]);
-    const dragOpacity = translationY.value < 0 ? interpolate(translationY.value, [0, -130], [1, 0], "clamp") : 1;
+    // For top: dragging up (negative) fades out. For bottom: dragging down (positive) fades out
+    const dismissDirection = isBottom ? translationY.value : -translationY.value;
+    const dragOpacity = dismissDirection > 0 ? interpolate(dismissDirection, [0, 130], [1, 0], "clamp") : 1;
     const opacity = progressOpacity * dragOpacity;
 
     const dragScale = interpolate(Math.abs(translationY.value), [0, 50], [1, 0.98], "clamp");
@@ -237,23 +267,31 @@ const ToastItem = ({ toast, index }: ToastItemProps) => {
     };
   });
 
+  const accentColor = theme.colors[toast.type].accent;
+  const backgroundColor = theme.colors[toast.type].background;
+  const verticalAnchor = isBottom ? { bottom: 0 } : { top: 0 };
+
   return (
     <GestureDetector gesture={panGesture}>
-      <Animated.View style={[styles.toast, animatedStyle]}>
+      <Animated.View style={[styles.toast, verticalAnchor, { backgroundColor }, theme.toastStyle, animatedStyle]}>
         <View style={styles.content}>
           <View style={styles.icon}>
-            <AnimatedIcon key={toast.type} type={toast.type} />
+            <AnimatedIcon key={toast.type} type={toast.type} accentColor={accentColor} />
           </View>
           <View style={styles.textContainer}>
             <Animated.Text
               maxFontSizeMultiplier={1.35}
               allowFontScaling={false}
-              style={[styles.title, titleColorStyle]}
+              style={[styles.title, theme.titleStyle, titleColorStyle]}
             >
               {toast.title}
             </Animated.Text>
             {toast.description && (
-              <Text allowFontScaling={false} maxFontSizeMultiplier={1.35} style={styles.description}>
+              <Text
+                allowFontScaling={false}
+                maxFontSizeMultiplier={1.35}
+                style={[styles.description, theme.descriptionStyle]}
+              >
                 {toast.description}
               </Text>
             )}
@@ -275,7 +313,6 @@ const styles = StyleSheet.create({
   container: {
     position: "absolute",
     left: 16,
-    backgroundColor: "black",
     right: 16,
     zIndex: 1000,
   },
@@ -327,6 +364,5 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 24,
     elevation: 8,
-    backgroundColor: "#FFFFFF",
   },
 });
