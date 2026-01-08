@@ -2,7 +2,6 @@ import type { Toast, ToastConfig, ToastOptions, ToastState, ToastTheme, ToastTyp
 
 export type Listener = (state: ToastState) => void;
 
-const MAX_VISIBLE_TOASTS = 3;
 const EXIT_DURATION = 350;
 
 /** Default theme values */
@@ -10,6 +9,7 @@ const DEFAULT_THEME: ToastTheme = {
   position: "top",
   offset: 0,
   stacking: true,
+  maxStack: 3,
   dismissible: true,
   showCloseButton: true,
   colors: {
@@ -46,6 +46,7 @@ function mergeConfig(config: ToastConfig | undefined): ToastTheme {
     position: config.position ?? DEFAULT_THEME.position,
     offset: config.offset ?? DEFAULT_THEME.offset,
     stacking: config.stacking ?? DEFAULT_THEME.stacking,
+    maxStack: config.maxStack ?? DEFAULT_THEME.maxStack,
     dismissible: config.dismissible ?? DEFAULT_THEME.dismissible,
     showCloseButton: config.showCloseButton ?? DEFAULT_THEME.showCloseButton,
     colors: mergedColors,
@@ -102,7 +103,7 @@ class ToastStore {
     options?: ToastOptions
   ): string => {
     const actualDuration = duration ?? options?.duration ?? this.theme.defaultDuration;
-    const maxToasts = this.theme.stacking ? MAX_VISIBLE_TOASTS : 1;
+    const maxToasts = this.theme.stacking ? this.theme.maxStack : 1;
 
     const id = `toast-${++this.toastIdCounter}`;
     const newToast: Toast = {
@@ -136,8 +137,10 @@ class ToastStore {
       const removeIds = new Set(toastsToRemove.map(t => t.id));
 
       if (this.theme.stacking) {
-        // When stacking is ON: just remove instantly (no animation for stack overflow)
-        visibleToasts = visibleToasts.filter(t => !removeIds.has(t.id));
+        // When stacking is ON: remove old toasts from state immediately (no animation for stack overflow)
+        this.setState({
+          visibleToasts: visibleToasts.filter(t => !removeIds.has(t.id)),
+        });
       } else {
         // When stacking is OFF: animate out the old toast, wait, then show new one
         this.setState({

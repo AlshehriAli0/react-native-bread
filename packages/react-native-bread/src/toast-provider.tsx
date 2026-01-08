@@ -55,6 +55,10 @@ interface BreadLoafProps {
 export function BreadLoaf({ children, config }: BreadLoafProps) {
   useEffect(() => {
     toastStore.setConfig(config);
+    return () => {
+      // Reset to defaults when this provider unmounts
+      toastStore.setConfig(undefined);
+    };
   }, [config]);
   return (
     <View style={styles.root}>

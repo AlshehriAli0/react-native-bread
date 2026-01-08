@@ -30,6 +30,8 @@ export interface ToastTheme {
   offset: number;
   /** Whether to show multiple toasts stacked (default: true). When false, only one toast shows at a time. */
   stacking: boolean;
+  /** Maximum number of toasts visible at once when stacking is enabled (default: 3) */
+  maxStack: number;
   /** Whether toasts can be dismissed via swipe gesture (default: true) */
   dismissible: boolean;
   /** Whether to show the close button on toasts (default: true). Loading toasts never show close button. */
@@ -90,7 +92,7 @@ export interface Toast {
 }
 
 export interface ToastState {
-  /** Up to 3 visible toasts (index 0 = front/newest, index 2 = back/oldest) */
+  /** Visible toasts (index 0 = front/newest) */
   visibleToasts: Toast[];
 }
 

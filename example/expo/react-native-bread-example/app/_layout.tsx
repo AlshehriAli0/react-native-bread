@@ -15,7 +15,7 @@ export default function RootLayout() {
         <Stack.Screen name="(custom)" options={{ headerShown: false }} />
         <Stack.Screen name="(global)" options={{ headerShown: false }} />
       </Stack>
-      <StatusBar style="auto" />
+      <StatusBar style="dark" />
     </GestureHandlerRootView>
   );
 }

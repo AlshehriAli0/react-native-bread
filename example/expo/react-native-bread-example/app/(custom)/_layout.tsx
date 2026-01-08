@@ -5,12 +5,7 @@ export default function CustomLayout() {
   return (
     <BreadLoaf>
       <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen
-          name="index"
-          options={{
-            headerShown: false,
-          }}
-        />
+        <Stack.Screen name="index" />
       </Stack>
     </BreadLoaf>
   );

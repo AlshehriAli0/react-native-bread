@@ -10,6 +10,7 @@ export default function GlobalConfigScreen() {
 
   const [position, setPosition] = useState<Position>("top");
   const [stacking, setStacking] = useState(true);
+  const [maxStack, setMaxStack] = useState(3);
   const [dismissible, setDismissible] = useState(true);
   const [showCloseButton, setShowCloseButton] = useState(true);
   const [customStyle, setCustomStyle] = useState(true);
@@ -29,6 +30,7 @@ export default function GlobalConfigScreen() {
       config={{
         position,
         stacking,
+        maxStack,
         dismissible,
         showCloseButton,
         offset: 8,
@@ -59,8 +61,10 @@ export default function GlobalConfigScreen() {
       }}
     >
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Global Config</Text>
-        <Text style={styles.subtitle}>Configure BreadLoaf provider options</Text>
+        <View style={styles.header}>
+          <Text style={styles.title}>⚙️ Global Config</Text>
+          <Text style={styles.subtitle}>Configure BreadLoaf provider options</Text>
+        </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Position</Text>
@@ -93,6 +97,30 @@ export default function GlobalConfigScreen() {
 
           <View style={styles.option}>
             <View>
+              <Text style={styles.optionLabel}>Max Stack</Text>
+              <Text style={styles.optionDesc}>Maximum visible toasts</Text>
+            </View>
+            <View style={styles.stepper}>
+              <Pressable
+                style={[styles.stepperButton, maxStack <= 1 && styles.stepperButtonDisabled]}
+                onPress={() => setMaxStack(Math.max(1, maxStack - 1))}
+                disabled={maxStack <= 1}
+              >
+                <Text style={[styles.stepperButtonText, maxStack <= 1 && styles.stepperButtonTextDisabled]}>−</Text>
+              </Pressable>
+              <Text style={styles.stepperValue}>{maxStack}</Text>
+              <Pressable
+                style={[styles.stepperButton, maxStack >= 10 && styles.stepperButtonDisabled]}
+                onPress={() => setMaxStack(Math.min(10, maxStack + 1))}
+                disabled={maxStack >= 10}
+              >
+                <Text style={[styles.stepperButtonText, maxStack >= 10 && styles.stepperButtonTextDisabled]}>+</Text>
+              </Pressable>
+            </View>
+          </View>
+
+          <View style={styles.option}>
+            <View>
               <Text style={styles.optionLabel}>Dismissible</Text>
               <Text style={styles.optionDesc}>Swipe to dismiss toasts</Text>
             </View>
@@ -118,17 +146,21 @@ export default function GlobalConfigScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Test It</Text>
-          <Pressable style={styles.button} onPress={showToast}>
-            <Text style={styles.buttonText}>Show Toast</Text>
-          </Pressable>
-          <Pressable style={[styles.button, styles.buttonSecondary]} onPress={showMultiple}>
-            <Text style={styles.buttonText}>Show 3 Toasts</Text>
-          </Pressable>
+          <View style={styles.buttons}>
+            <Pressable style={styles.button} onPress={showToast}>
+              <Text style={styles.buttonText}>Show Toast</Text>
+            </Pressable>
+            <Pressable style={[styles.button, styles.buttonSecondary]} onPress={showMultiple}>
+              <Text style={styles.buttonText}>Show 3 Toasts</Text>
+            </Pressable>
+          </View>
         </View>
 
-        <Pressable style={styles.navButton} onPress={() => router.back()} hitSlop={20}>
-          <Text style={styles.navText}>← Back</Text>
-        </Pressable>
+        <View style={styles.navButtons}>
+          <Pressable style={styles.navButton} onPress={() => router.back()} hitSlop={20}>
+            <Text style={styles.navText}>← Back to Default</Text>
+          </Pressable>
+        </View>
       </ScrollView>
     </BreadLoaf>
   );
@@ -136,36 +168,37 @@ export default function GlobalConfigScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    paddingTop: 60,
     flex: 1,
     backgroundColor: "#f9fafb",
   },
   content: {
     padding: 24,
-    paddingTop: 60,
+    paddingTop: 80,
+    paddingBottom: 40,
+  },
+  header: {
+    marginBottom: 32,
   },
   title: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: "700",
-    textAlign: "center",
     color: "#111827",
+    marginBottom: 8,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 16,
     color: "#6b7280",
-    textAlign: "center",
-    marginBottom: 32,
   },
   section: {
     marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
     color: "#9ca3af",
     textTransform: "uppercase",
     letterSpacing: 1,
-    marginBottom: 12,
+    marginBottom: 16,
   },
   segmented: {
     flexDirection: "row",
@@ -208,12 +241,45 @@ const styles = StyleSheet.create({
     color: "#6b7280",
     marginTop: 2,
   },
+  stepper: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  stepperButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: "#3b82f6",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepperButtonDisabled: {
+    backgroundColor: "#e5e7eb",
+  },
+  stepperButtonText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "600",
+  },
+  stepperButtonTextDisabled: {
+    color: "#9ca3af",
+  },
+  stepperValue: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#111827",
+    minWidth: 24,
+    textAlign: "center",
+  },
+  buttons: {
+    gap: 12,
+  },
   button: {
     backgroundColor: "#3b82f6",
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: "center",
-    marginBottom: 12,
   },
   buttonSecondary: {
     backgroundColor: "#8b5cf6",
@@ -223,12 +289,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
+  navButtons: {
+    marginTop: 24,
+    gap: 12,
+  },
   navButton: {
-    marginTop: 20,
-    alignItems: "center",
+    backgroundColor: "#e5e7eb",
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
   },
   navText: {
-    color: "#6b7280",
-    fontSize: 16,
+    color: "#374151",
+    fontSize: 15,
+    fontWeight: "500",
   },
 });
