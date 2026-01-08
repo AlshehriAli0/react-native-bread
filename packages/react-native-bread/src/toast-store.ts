@@ -140,10 +140,9 @@ class ToastStore {
     this.rescheduleAllTimeouts();
   }
 
-  updateToast = (id: string, data: Partial<Omit<Toast, "id" | "createdAt">> & { duration?: number }) => {
+  updateToast = (id: string, data: Partial<Omit<Toast, "id" | "createdAt">>) => {
     const { visibleToasts } = this.state;
     const index = visibleToasts.findIndex(t => t.id === id);
-
     if (index === -1) return;
 
     this.setState({

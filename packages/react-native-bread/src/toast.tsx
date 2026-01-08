@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
@@ -20,6 +20,40 @@ const TOAST_VARIANT_COLORS = {
   error: "#F05964",
   info: "#EDBE43",
 } as const;
+
+const ToastIcon = ({ type }: { type: ToastType }) => {
+  switch (type) {
+    case "success":
+      return <GreenCheck width={36} height={36} />;
+    case "error":
+      return <RedX width={28} height={28} />;
+    case "loading":
+      return <ActivityIndicator size={28} color="#232323" />;
+    case "info":
+      return <InfoIcon width={28} height={28} fill="#EDBE43" />;
+    default:
+      return <GreenCheck width={36} height={36} />;
+  }
+};
+
+const AnimatedIcon = ({ type }: { type: ToastType }) => {
+  const progress = useSharedValue(0);
+
+  useEffect(() => {
+    progress.value = withTiming(1, { duration: 350, easing: Easing.out(Easing.back(1.5)) });
+  }, [progress]);
+
+  const style = useAnimatedStyle(() => ({
+    opacity: progress.value,
+    transform: [{ scale: 0.7 + progress.value * 0.3 }],
+  }));
+
+  return (
+    <Animated.View style={style}>
+      <ToastIcon type={type} />
+    </Animated.View>
+  );
+};
 
 // singleton instance
 export const ToastContainer = () => {
@@ -86,12 +120,49 @@ const ToastItem = ({ toast, index }: ToastItemProps) => {
   // Stack position animation
   const stackIndex = useSharedValue(index);
 
-  // Variant animation (loading -> success/error)
-  const variantProgress = useSharedValue(1);
-  const previousType = useSharedValue<ToastType | null>(null);
-  const [prevType, setPrevType] = useState<ToastType | null>(null);
-  const prevColor = useSharedValue<string>(TOAST_VARIANT_COLORS.loading);
-  const nextColor = useSharedValue<string>(TOAST_VARIANT_COLORS.loading);
+  // Title color animation on variant change
+  const colorProgress = useSharedValue(1);
+  const fromColor = useSharedValue(TOAST_VARIANT_COLORS[toast.type]);
+  const toColor = useSharedValue(TOAST_VARIANT_COLORS[toast.type]);
+
+  // Refs for tracking previous values to avoid unnecessary animations
+  const lastHandledType = useRef(toast.type);
+  const prevIndex = useRef(index);
+  const hasEntered = useRef(false);
+
+  // Combined animation effect for entry, exit, color transitions, and stack position
+  useEffect(() => {
+    // Entry animation (only once on mount)
+    if (!hasEntered.current && !toast.isExiting) {
+      progress.value = withTiming(1, { duration: Duration, easing: EASING });
+      hasEntered.current = true;
+    }
+
+    // Exit animation when isExiting becomes true
+    if (toast.isExiting) {
+      progress.value = withTiming(0, { duration: ExitDuration, easing: EASING });
+      translationY.value = withTiming(-100, { duration: ExitDuration, easing: EASING });
+    }
+
+    // Color transition when type changes
+    if (toast.type !== lastHandledType.current) {
+      fromColor.value = TOAST_VARIANT_COLORS[lastHandledType.current];
+      toColor.value = TOAST_VARIANT_COLORS[toast.type];
+      lastHandledType.current = toast.type;
+      colorProgress.value = 0;
+      colorProgress.value = withTiming(1, { duration: 300, easing: EASING });
+    }
+
+    // Stack position animation when index changes
+    if (index >= 0 && prevIndex.current !== index) {
+      stackIndex.value = withTiming(index, { duration: 300, easing: EASING });
+      prevIndex.current = index;
+    }
+  }, [toast.isExiting, toast.type, index, progress, translationY, fromColor, toColor, colorProgress, stackIndex]);
+
+  const titleColorStyle = useAnimatedStyle(() => ({
+    color: interpolateColor(colorProgress.value, [0, 1], [fromColor.value, toColor.value]),
+  }));
 
   const dismissToast = useCallback(() => {
     toastStore.hide(toast.id);
@@ -141,57 +212,6 @@ const ToastItem = ({ toast, index }: ToastItemProps) => {
       }
     });
 
-  // Entry animation
-  useEffect(() => {
-    progress.value = withTiming(1, {
-      duration: Duration,
-      easing: EASING,
-    });
-  }, [progress]);
-
-  // Exit animation when isExiting becomes true
-  useEffect(() => {
-    if (toast.isExiting) {
-      progress.value = withTiming(0, {
-        duration: ExitDuration,
-        easing: EASING,
-      });
-      translationY.value = withTiming(-100, {
-        duration: ExitDuration,
-        easing: EASING,
-      });
-    }
-  }, [toast.isExiting, progress, translationY]);
-
-  // Update stack position when index changes (skip if exiting)
-  useEffect(() => {
-    if (index >= 0) {
-      stackIndex.value = withTiming(index, {
-        duration: 300,
-        easing: EASING,
-      });
-    }
-  }, [index, stackIndex]);
-
-  // Variant change animation (loading -> success/error)
-  useEffect(() => {
-    if (toast.type && toast.type !== previousType.value) {
-      setPrevType(previousType.value);
-
-      const fromClr = previousType.value ? TOAST_VARIANT_COLORS[previousType.value] : TOAST_VARIANT_COLORS.loading;
-      prevColor.value = fromClr;
-      nextColor.value = TOAST_VARIANT_COLORS[toast.type] ?? TOAST_VARIANT_COLORS.loading;
-
-      previousType.value = toast.type;
-
-      variantProgress.value = 0;
-      variantProgress.value = withTiming(1, {
-        duration: 350,
-        easing: EASING,
-      });
-    }
-  }, [toast.type, previousType, prevColor, nextColor, variantProgress]);
-
   const animatedStyle = useAnimatedStyle(() => {
     const baseTranslateY = interpolate(progress.value, [0, 1], [FromY, ToY]);
 
@@ -204,7 +224,7 @@ const ToastItem = ({ toast, index }: ToastItemProps) => {
     const finalTranslateY = baseTranslateY + translationY.value + stackOffsetY;
 
     const progressOpacity = interpolate(progress.value, [0, 1], [0, 1]);
-    const dragOpacity = translationY.value < 0 ? interpolate(translationY.value, [0, -90], [1, 0], "clamp") : 1;
+    const dragOpacity = translationY.value < 0 ? interpolate(translationY.value, [0, -130], [1, 0], "clamp") : 1;
     const opacity = progressOpacity * dragOpacity;
 
     const dragScale = interpolate(Math.abs(translationY.value), [0, 50], [1, 0.98], "clamp");
@@ -217,52 +237,18 @@ const ToastItem = ({ toast, index }: ToastItemProps) => {
     };
   });
 
-  const prevIconAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: 1 - variantProgress.value,
-    transform: [{ scale: interpolate(variantProgress.value, [0, 1], [1, 0.8], "clamp") }],
-  }));
-
-  const currentIconAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: variantProgress.value,
-    transform: [{ scale: interpolate(variantProgress.value, [0, 1], [0.8, 1], "clamp") }],
-  }));
-
-  const titleAnimatedStyle = useAnimatedStyle(() => ({
-    color: interpolateColor(variantProgress.value, [0, 1], [prevColor.value, nextColor.value]),
-  }));
-
-  const renderPlainIcon = (type: ToastType) => {
-    switch (type) {
-      case "success":
-        return <GreenCheck width={36} height={36} />;
-      case "error":
-        return <RedX width={28} height={28} />;
-      case "loading":
-        return <ActivityIndicator size={28} color="#232323" />;
-      case "info":
-        return <InfoIcon width={28} height={28} fill="#EDBE43" />;
-      default:
-        return <GreenCheck width={36} height={36} />;
-    }
-  };
-
   return (
     <GestureDetector gesture={panGesture}>
       <Animated.View style={[styles.toast, animatedStyle]}>
         <View style={styles.content}>
-          <View style={styles.iconContainer}>
-            {prevType && (
-              <Animated.View style={[StyleSheet.absoluteFill, styles.icon, prevIconAnimatedStyle]}>
-                {renderPlainIcon(prevType)}
-              </Animated.View>
-            )}
-            <Animated.View style={[styles.icon, currentIconAnimatedStyle]}>{renderPlainIcon(toast.type)}</Animated.View>
+          <View style={styles.icon}>
+            <AnimatedIcon key={toast.type} type={toast.type} />
           </View>
           <View style={styles.textContainer}>
             <Animated.Text
               maxFontSizeMultiplier={1.35}
               allowFontScaling={false}
-              style={[styles.title, titleAnimatedStyle]}
+              style={[styles.title, titleColorStyle]}
             >
               {toast.title}
             </Animated.Text>
@@ -289,6 +275,7 @@ const styles = StyleSheet.create({
   container: {
     position: "absolute",
     left: 16,
+    backgroundColor: "black",
     right: 16,
     zIndex: 1000,
   },
@@ -309,7 +296,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexDirection: "row",
     gap: 12,
-    minHeight: 80,
+    minHeight: 36,
   },
   description: {
     color: "#6B7280",
@@ -317,13 +304,9 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     lineHeight: 16,
   },
-  iconContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
   textContainer: {
     flex: 1,
-    gap: 4,
+    gap: 2,
     justifyContent: "center",
   },
   title: {
