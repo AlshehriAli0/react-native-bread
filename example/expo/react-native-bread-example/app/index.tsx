@@ -26,8 +26,10 @@ export default function HomeScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 20 }]}>
-      <Text style={styles.title}>🍞 Toast Demo</Text>
-      <Text style={styles.subtitle}>Tap a button to show a toast</Text>
+      <Text style={styles.title}>🍞 React Native Bread</Text>
+      <Text style={styles.subtitle}>
+        A delicious toast library for React Native with beautiful animations and gesture support
+      </Text>
 
       <View style={styles.buttonsContainer}>
         <Pressable
