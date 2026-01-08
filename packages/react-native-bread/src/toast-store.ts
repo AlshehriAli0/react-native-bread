@@ -117,7 +117,7 @@ class ToastStore {
       options,
     };
 
-    let { visibleToasts } = this.state;
+    const { visibleToasts } = this.state;
 
     // Get only non-exiting toasts for count
     const activeToasts = visibleToasts.filter(t => !t.isExiting);
