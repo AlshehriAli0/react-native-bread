@@ -57,40 +57,69 @@ const promiseToast = async <T>(promise: Promise<T>, messages: PromiseMessages): 
 
 type BaseToastFn = ((title: string, description?: string, type?: ToastType, duration?: number) => void) & {
   /**
-   * Show a success toast
+   * Show a success toast with a green checkmark icon.
    * @param title - The toast title
    * @param description - Optional description text
    * @param duration - Duration in ms (default: 4000)
+   * @example
+   * ```ts
+   * toast.success("Saved!", "Your changes have been saved");
+   * ```
    */
   success: (title: string, description?: string, duration?: number) => void;
   /**
-   * Show an error toast
+   * Show an error toast with a red X icon.
    * @param title - The toast title
    * @param description - Optional description text
    * @param duration - Duration in ms (default: 4000)
+   * @example
+   * ```ts
+   * toast.error("Failed", "Something went wrong");
+   * ```
    */
   error: (title: string, description?: string, duration?: number) => void;
   /**
-   * Show an info toast
+   * Show an info toast with a blue info icon.
    * @param title - The toast title
    * @param description - Optional description text
    * @param duration - Duration in ms (default: 4000)
+   * @example
+   * ```ts
+   * toast.info("Tip", "Swipe up to dismiss");
+   * ```
    */
   info: (title: string, description?: string, duration?: number) => void;
   /**
-   * Show a loading toast that transitions to success/error based on promise result
+   * Show a loading toast that automatically transitions to success or error
+   * based on the promise result. Great for async operations like API calls.
    * @param promise - The promise to track
-   * @param messages - Messages for loading, success, and error states
-   * @returns Promise result with data or error
+   * @param messages - Configuration for loading, success, and error states
+   * @returns Promise result with `{ data, success: true }` or `{ error, success: false }`
+   * @example
+   * ```ts
+   * toast.promise(fetchUser(id), {
+   *   loading: { title: "Loading...", description: "Fetching user data" },
+   *   success: { title: "Done!", description: "User loaded" },
+   *   error: (err) => ({ title: "Error", description: err.message }),
+   * });
+   * ```
    */
   promise: <T>(promise: Promise<T>, messages: PromiseMessages) => Promise<PromiseResult<T>>;
   /**
-   * Dismiss a specific toast
+   * Dismiss a specific toast by its ID.
    * @param id - The toast ID to dismiss
+   * @example
+   * ```ts
+   * toast.dismiss("toast-123");
+   * ```
    */
   dismiss: (id: string) => void;
   /**
-   * Dismiss all visible toasts
+   * Dismiss all visible toasts immediately.
+   * @example
+   * ```ts
+   * toast.dismissAll();
+   * ```
    */
   dismissAll: () => void;
 };
@@ -120,4 +149,28 @@ toastFn.dismissAll = () => {
   toastStore.hideAll();
 };
 
+/**
+ * Toast API for showing notifications.
+ *
+ * @example
+ * ```ts
+ * import { toast } from 'react-native-bread';
+ *
+ * // Basic toasts
+ * toast.success("Saved!", "Your changes have been saved");
+ * toast.error("Error", "Something went wrong");
+ * toast.info("Tip", "Swipe up to dismiss");
+ *
+ * // Promise toast (loading → success/error)
+ * toast.promise(apiCall(), {
+ *   loading: { title: "Loading..." },
+ *   success: { title: "Done!" },
+ *   error: (err) => ({ title: "Failed", description: err.message }),
+ * });
+ *
+ * // Dismiss toasts
+ * toast.dismiss(id);
+ * toast.dismissAll();
+ * ```
+ */
 export const toast = toastFn;

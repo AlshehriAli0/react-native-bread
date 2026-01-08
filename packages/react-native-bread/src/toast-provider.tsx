@@ -2,11 +2,28 @@ import type { ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
 import { ToastContainer } from "./toast";
 
-interface ToastProviderProps {
+interface BreadLoafProps {
   children: ReactNode;
 }
 
-export function ToastProvider({ children }: ToastProviderProps) {
+/**
+ * Toast provider component that enables toast notifications in your app.
+ * Wrap your root component with `<BreadLoaf>` to start showing toasts.
+ *
+ * @example
+ * ```tsx
+ * import { BreadLoaf } from 'react-native-bread';
+ *
+ * export default function App() {
+ *   return (
+ *     <BreadLoaf>
+ *       <YourApp />
+ *     </BreadLoaf>
+ *   );
+ * }
+ * ```
+ */
+export function BreadLoaf({ children }: BreadLoafProps) {
   return (
     <View style={styles.root}>
       {children}
