@@ -57,9 +57,14 @@ export default function DefaultScreen() {
         </Pressable>
       </View>
 
-      <Pressable style={styles.navButton} onPress={() => router.push("/(custom)")} hitSlop={20}>
-        <Text style={styles.navText}>Per-Toast Options →</Text>
-      </Pressable>
+      <View style={styles.navButtons}>
+        <Pressable style={styles.navButton} onPress={() => router.push("/(custom)")} hitSlop={20}>
+          <Text style={styles.navText}>Per-Toast Options →</Text>
+        </Pressable>
+        <Pressable style={styles.navButton} onPress={() => router.push("/(global)")} hitSlop={20}>
+          <Text style={styles.navText}>Global Config →</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -123,8 +128,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
-  navButton: {
+  navButtons: {
     marginTop: 40,
+    gap: 12,
+  },
+  navButton: {
     alignItems: "center",
   },
   navText: {

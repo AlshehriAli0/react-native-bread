@@ -139,29 +139,40 @@ class ToastStore {
         // When stacking is ON: just remove instantly (no animation for stack overflow)
         visibleToasts = visibleToasts.filter(t => !removeIds.has(t.id));
       } else {
-        // When stacking is OFF: animate out the replaced toast
-        visibleToasts = visibleToasts.map(t => (removeIds.has(t.id) ? { ...t, isExiting: true } : t));
-        for (const toast of toastsToRemove) {
-          setTimeout(() => {
+        // When stacking is OFF: animate out the old toast, wait, then show new one
+        this.setState({
+          visibleToasts: visibleToasts.map(t => (removeIds.has(t.id) ? { ...t, isExiting: true } : t)),
+        });
+
+        // Delay showing the new toast until the old one has animated out
+        setTimeout(() => {
+          for (const toast of toastsToRemove) {
             this.removeToast(toast.id);
-          }, EXIT_DURATION);
-        }
+          }
+          this.addToast(newToast, actualDuration);
+        }, EXIT_DURATION - 220);
+
+        return id;
       }
     }
 
-    // Add new toast
-    this.setState({
-      visibleToasts: [newToast, ...visibleToasts],
-    });
-
-    // Schedule auto-dismiss with duration multiplier based on position
-    this.scheduleTimeout(id, actualDuration, 0);
-
-    // Reschedule timeouts for other toasts based on their new positions
-    this.rescheduleAllTimeouts();
+    // Add new toast immediately (stacking ON or no existing toasts)
+    this.addToast(newToast, actualDuration);
 
     return id;
   };
+
+  private addToast(toast: Toast, duration: number) {
+    this.setState({
+      visibleToasts: [toast, ...this.state.visibleToasts.filter(t => !t.isExiting)],
+    });
+
+    // Schedule auto-dismiss with duration multiplier based on position
+    this.scheduleTimeout(toast.id, duration, 0);
+
+    // Reschedule timeouts for other toasts based on their new positions
+    this.rescheduleAllTimeouts();
+  }
 
   private scheduleTimeout(id: string, baseDuration: number, index: number) {
     const existingTimeout = this.timeouts.get(id);
