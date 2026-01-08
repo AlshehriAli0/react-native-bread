@@ -3,7 +3,7 @@
   "private": true,
   "workspaces": ["packages/*", "example/*"],
   "scripts": {
-    "dev": "bun run --cwd example/expo/react-native-bread-example start",
+    "dev": "bun run --cwd example/react-native-bread-example start",
     "build": "bun run --cwd packages/react-native-bread build",
     "typecheck": "bun run --cwd packages/react-native-bread typecheck",
     "lint": "biome check .",
