@@ -11,11 +11,14 @@ export { toastStore } from "./toast-store";
 // Types
 export type {
   ErrorMessageInput,
+  IconProps,
+  IconRenderFn,
   MessageInput,
   PromiseMessages,
   PromiseResult,
   Toast,
   ToastConfig,
+  ToastOptions,
   ToastPosition,
   ToastState,
   ToastType,

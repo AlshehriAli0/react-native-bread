@@ -1,4 +1,4 @@
-import type { Toast, ToastConfig, ToastState, ToastTheme, ToastType, ToastTypeColors } from "./types";
+import type { Toast, ToastConfig, ToastOptions, ToastState, ToastTheme, ToastType, ToastTypeColors } from "./types";
 
 export type Listener = (state: ToastState) => void;
 
@@ -10,12 +10,15 @@ const DEFAULT_THEME: ToastTheme = {
   position: "top",
   offset: 0,
   stacking: true,
+  dismissible: true,
+  showCloseButton: true,
   colors: {
     success: { accent: "#28B770", background: "#FFFFFF" },
     error: { accent: "#F05964", background: "#FFFFFF" },
     info: { accent: "#EDBE43", background: "#FFFFFF" },
     loading: { accent: "#232323", background: "#FFFFFF" },
   },
+  icons: {},
   toastStyle: {},
   titleStyle: {},
   descriptionStyle: {},
@@ -43,7 +46,10 @@ function mergeConfig(config: ToastConfig | undefined): ToastTheme {
     position: config.position ?? DEFAULT_THEME.position,
     offset: config.offset ?? DEFAULT_THEME.offset,
     stacking: config.stacking ?? DEFAULT_THEME.stacking,
+    dismissible: config.dismissible ?? DEFAULT_THEME.dismissible,
+    showCloseButton: config.showCloseButton ?? DEFAULT_THEME.showCloseButton,
     colors: mergedColors,
+    icons: { ...DEFAULT_THEME.icons, ...config.icons },
     toastStyle: { ...DEFAULT_THEME.toastStyle, ...config.toastStyle },
     titleStyle: { ...DEFAULT_THEME.titleStyle, ...config.titleStyle },
     descriptionStyle: { ...DEFAULT_THEME.descriptionStyle, ...config.descriptionStyle },
@@ -88,19 +94,26 @@ class ToastStore {
     this.theme = mergeConfig(config);
   };
 
-  show = (title: string, description?: string, type: ToastType = "success", duration?: number): string => {
-    const actualDuration = duration ?? this.theme.defaultDuration;
+  show = (
+    title: string,
+    description?: string,
+    type: ToastType = "success",
+    duration?: number,
+    options?: ToastOptions
+  ): string => {
+    const actualDuration = duration ?? options?.duration ?? this.theme.defaultDuration;
     const maxToasts = this.theme.stacking ? MAX_VISIBLE_TOASTS : 1;
 
     const id = `toast-${++this.toastIdCounter}`;
     const newToast: Toast = {
       id,
       title,
-      description,
+      description: description ?? options?.description,
       type,
       duration: actualDuration,
       createdAt: Date.now(),
       isExiting: false,
+      options,
     };
 
     let { visibleToasts } = this.state;
@@ -109,9 +122,9 @@ class ToastStore {
     const activeToasts = visibleToasts.filter(t => !t.isExiting);
 
     if (activeToasts.length >= maxToasts) {
-      // Mark excess toasts as exiting (animate out) instead of removing immediately
-      const toastsToExit = activeToasts.slice(maxToasts - 1);
-      for (const toast of toastsToExit) {
+      const toastsToRemove = activeToasts.slice(maxToasts - 1);
+
+      for (const toast of toastsToRemove) {
         // Clear auto-dismiss timeout
         const timeout = this.timeouts.get(toast.id);
         if (timeout) {
@@ -120,15 +133,19 @@ class ToastStore {
         }
       }
 
-      // Mark them as exiting
-      const exitingIds = new Set(toastsToExit.map(t => t.id));
-      visibleToasts = visibleToasts.map(t => (exitingIds.has(t.id) ? { ...t, isExiting: true } : t));
+      const removeIds = new Set(toastsToRemove.map(t => t.id));
 
-      // Schedule removal after exit animation
-      for (const toast of toastsToExit) {
-        setTimeout(() => {
-          this.removeToast(toast.id);
-        }, EXIT_DURATION);
+      if (this.theme.stacking) {
+        // When stacking is ON: just remove instantly (no animation for stack overflow)
+        visibleToasts = visibleToasts.filter(t => !removeIds.has(t.id));
+      } else {
+        // When stacking is OFF: animate out the replaced toast
+        visibleToasts = visibleToasts.map(t => (removeIds.has(t.id) ? { ...t, isExiting: true } : t));
+        for (const toast of toastsToRemove) {
+          setTimeout(() => {
+            this.removeToast(toast.id);
+          }, EXIT_DURATION);
+        }
       }
     }
 

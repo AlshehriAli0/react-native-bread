@@ -1,8 +1,31 @@
 import { toastStore } from "./toast-store";
-import type { ErrorMessageInput, MessageInput, PromiseMessages, PromiseResult, ToastType } from "./types";
+import type {
+  ErrorMessageInput,
+  MessageInput,
+  PromiseMessages,
+  PromiseResult,
+  ToastOptions,
+  ToastType,
+} from "./types";
+
+/** Second parameter can be a string (description) or options object */
+type DescriptionOrOptions = string | ToastOptions;
 
 const _toast = (title: string, description?: string, type?: ToastType, duration?: number) => {
   toastStore.show(title, description, type, duration);
+};
+
+/** Helper to parse the second argument which can be string or options */
+const parseDescriptionOrOptions = (
+  arg?: DescriptionOrOptions
+): { description?: string; duration?: number; options?: ToastOptions } => {
+  if (!arg) return {};
+  if (typeof arg === "string") return { description: arg };
+  return {
+    description: arg.description,
+    duration: arg.duration,
+    options: arg,
+  };
 };
 
 const parseMessage = (input: MessageInput): { title: string; description?: string; duration?: number } =>
@@ -59,36 +82,47 @@ type BaseToastFn = ((title: string, description?: string, type?: ToastType, dura
   /**
    * Show a success toast with a green checkmark icon.
    * @param title - The toast title
-   * @param description - Optional description text
-   * @param duration - Duration in ms (default: 4000)
+   * @param descriptionOrOptions - Description string OR options object with description, duration, icon, style, etc.
+   * @param duration - Duration in ms (default: 4000). Ignored if options object is passed.
    * @example
    * ```ts
+   * // Simple usage
    * toast.success("Saved!", "Your changes have been saved");
+   *
+   * // With options
+   * toast.success("Saved!", {
+   *   description: "Your changes have been saved",
+   *   duration: 5000,
+   *   icon: <CustomIcon />,
+   *   style: { borderRadius: 8 },
+   * });
    * ```
    */
-  success: (title: string, description?: string, duration?: number) => void;
+  success: (title: string, descriptionOrOptions?: DescriptionOrOptions, duration?: number) => void;
   /**
    * Show an error toast with a red X icon.
    * @param title - The toast title
-   * @param description - Optional description text
-   * @param duration - Duration in ms (default: 4000)
+   * @param descriptionOrOptions - Description string OR options object
+   * @param duration - Duration in ms (default: 4000). Ignored if options object is passed.
    * @example
    * ```ts
    * toast.error("Failed", "Something went wrong");
+   * toast.error("Failed", { description: "Something went wrong", icon: <CustomErrorIcon /> });
    * ```
    */
-  error: (title: string, description?: string, duration?: number) => void;
+  error: (title: string, descriptionOrOptions?: DescriptionOrOptions, duration?: number) => void;
   /**
    * Show an info toast with a blue info icon.
    * @param title - The toast title
-   * @param description - Optional description text
-   * @param duration - Duration in ms (default: 4000)
+   * @param descriptionOrOptions - Description string OR options object
+   * @param duration - Duration in ms (default: 4000). Ignored if options object is passed.
    * @example
    * ```ts
    * toast.info("Tip", "Swipe up to dismiss");
+   * toast.info("Tip", { description: "Swipe up to dismiss", style: { backgroundColor: '#f0f9ff' } });
    * ```
    */
-  info: (title: string, description?: string, duration?: number) => void;
+  info: (title: string, descriptionOrOptions?: DescriptionOrOptions, duration?: number) => void;
   /**
    * Show a loading toast that automatically transitions to success or error
    * based on the promise result. Great for async operations like API calls.
@@ -127,16 +161,19 @@ type BaseToastFn = ((title: string, description?: string, type?: ToastType, dura
 // Build the toast API
 const toastFn = _toast as unknown as BaseToastFn;
 
-toastFn.success = (title: string, description?: string, duration?: number) => {
-  _toast(title, description, "success", duration);
+toastFn.success = (title: string, descriptionOrOptions?: DescriptionOrOptions, duration?: number) => {
+  const { description, duration: optDuration, options } = parseDescriptionOrOptions(descriptionOrOptions);
+  toastStore.show(title, description, "success", duration ?? optDuration, options);
 };
 
-toastFn.error = (title: string, description?: string, duration?: number) => {
-  _toast(title, description, "error", duration);
+toastFn.error = (title: string, descriptionOrOptions?: DescriptionOrOptions, duration?: number) => {
+  const { description, duration: optDuration, options } = parseDescriptionOrOptions(descriptionOrOptions);
+  toastStore.show(title, description, "error", duration ?? optDuration, options);
 };
 
-toastFn.info = (title: string, description?: string, duration?: number) => {
-  _toast(title, description, "info", duration);
+toastFn.info = (title: string, descriptionOrOptions?: DescriptionOrOptions, duration?: number) => {
+  const { description, duration: optDuration, options } = parseDescriptionOrOptions(descriptionOrOptions);
+  toastStore.show(title, description, "info", duration ?? optDuration, options);
 };
 
 toastFn.promise = promiseToast;

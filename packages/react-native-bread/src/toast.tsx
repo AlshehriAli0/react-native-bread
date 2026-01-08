@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
@@ -13,24 +13,58 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
 import { CloseIcon, GreenCheck, InfoIcon, RedX } from "./icons";
 import { type Toast as ToastData, type ToastState, type ToastType, toastStore } from "./toast-store";
-import type { ToastPosition, ToastTheme } from "./types";
+import type { IconRenderFn, ToastPosition, ToastTheme } from "./types";
 
-const ToastIcon = ({ type, accentColor }: { type: ToastType; accentColor: string }) => {
+const ICON_SIZE = 28;
+
+/** Default icon for each toast type */
+const DefaultIcon = ({ type, accentColor }: { type: ToastType; accentColor: string }) => {
   switch (type) {
     case "success":
       return <GreenCheck width={36} height={36} fill={accentColor} />;
     case "error":
-      return <RedX width={28} height={28} fill={accentColor} />;
+      return <RedX width={ICON_SIZE} height={ICON_SIZE} fill={accentColor} />;
     case "loading":
-      return <ActivityIndicator size={28} color={accentColor} />;
+      return <ActivityIndicator size={ICON_SIZE} color={accentColor} />;
     case "info":
-      return <InfoIcon width={28} height={28} fill={accentColor} />;
+      return <InfoIcon width={ICON_SIZE} height={ICON_SIZE} fill={accentColor} />;
     default:
       return <GreenCheck width={36} height={36} fill={accentColor} />;
   }
 };
 
-const AnimatedIcon = ({ type, accentColor }: { type: ToastType; accentColor: string }) => {
+/** Resolves the icon to render - checks per-toast, then config, then default */
+const resolveIcon = (
+  type: ToastType,
+  accentColor: string,
+  customIcon?: ReactNode | IconRenderFn,
+  configIcon?: IconRenderFn
+): ReactNode => {
+  // Per-toast custom icon takes priority
+  if (customIcon) {
+    if (typeof customIcon === "function") {
+      return customIcon({ color: accentColor, size: ICON_SIZE });
+    }
+    return customIcon;
+  }
+
+  // Config-level custom icon
+  if (configIcon) {
+    return configIcon({ color: accentColor, size: ICON_SIZE });
+  }
+
+  // Default icon
+  return <DefaultIcon type={type} accentColor={accentColor} />;
+};
+
+interface AnimatedIconProps {
+  type: ToastType;
+  accentColor: string;
+  customIcon?: ReactNode | IconRenderFn;
+  configIcon?: IconRenderFn;
+}
+
+const AnimatedIcon = ({ type, accentColor, customIcon, configIcon }: AnimatedIconProps) => {
   const progress = useSharedValue(0);
 
   useEffect(() => {
@@ -42,11 +76,7 @@ const AnimatedIcon = ({ type, accentColor }: { type: ToastType; accentColor: str
     transform: [{ scale: 0.7 + progress.value * 0.3 }],
   }));
 
-  return (
-    <Animated.View style={style}>
-      <ToastIcon type={type} accentColor={accentColor} />
-    </Animated.View>
-  );
+  return <Animated.View style={style}>{resolveIcon(type, accentColor, customIcon, configIcon)}</Animated.View>;
 };
 
 // singleton instance
@@ -271,18 +301,38 @@ const ToastItem = ({ toast, index, theme, position }: ToastItemProps) => {
   const backgroundColor = theme.colors[toast.type].background;
   const verticalAnchor = isBottom ? { bottom: 0 } : { top: 0 };
 
+  // Per-toast overrides from options
+  const { options } = toast;
+  const customIcon = options?.icon;
+  const configIcon = theme.icons[toast.type];
+
+  // Resolve dismissible and showCloseButton (per-toast overrides config)
+  const isDismissible = options?.dismissible ?? theme.dismissible;
+  const shouldShowCloseButton = toast.type !== "loading" && (options?.showCloseButton ?? theme.showCloseButton);
+
+  // Enable/disable gesture based on dismissible setting
+  const gesture = isDismissible ? panGesture : Gesture.Pan().enabled(false);
+
   return (
-    <GestureDetector gesture={panGesture}>
-      <Animated.View style={[styles.toast, verticalAnchor, { backgroundColor }, theme.toastStyle, animatedStyle]}>
+    <GestureDetector gesture={gesture}>
+      <Animated.View
+        style={[styles.toast, verticalAnchor, { backgroundColor }, theme.toastStyle, options?.style, animatedStyle]}
+      >
         <View style={styles.content}>
           <View style={styles.icon}>
-            <AnimatedIcon key={toast.type} type={toast.type} accentColor={accentColor} />
+            <AnimatedIcon
+              key={toast.type}
+              type={toast.type}
+              accentColor={accentColor}
+              customIcon={customIcon}
+              configIcon={configIcon}
+            />
           </View>
           <View style={styles.textContainer}>
             <Animated.Text
               maxFontSizeMultiplier={1.35}
               allowFontScaling={false}
-              style={[styles.title, theme.titleStyle, titleColorStyle]}
+              style={[styles.title, theme.titleStyle, options?.titleStyle, titleColorStyle]}
             >
               {toast.title}
             </Animated.Text>
@@ -290,13 +340,13 @@ const ToastItem = ({ toast, index, theme, position }: ToastItemProps) => {
               <Text
                 allowFontScaling={false}
                 maxFontSizeMultiplier={1.35}
-                style={[styles.description, theme.descriptionStyle]}
+                style={[styles.description, theme.descriptionStyle, options?.descriptionStyle]}
               >
                 {toast.description}
               </Text>
             )}
           </View>
-          {toast.type !== "loading" && (
+          {shouldShowCloseButton && (
             <Pressable style={styles.closeButton} onPress={dismissToast} hitSlop={12}>
               <CloseIcon width={20} height={20} />
             </Pressable>
