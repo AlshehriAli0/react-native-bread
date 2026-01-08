@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     flex: 1,
-    gap: 2,
+    gap: 1,
     justifyContent: "center",
   },
   title: {
