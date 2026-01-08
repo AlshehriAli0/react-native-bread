@@ -71,46 +71,66 @@ toast.promise(fetchData(), {
 
 ### Per-Toast Options
 
-Instead of a description string, you can pass an options object:
+Instead of a description string, you can pass an options object as the second argument:
 
 ```tsx
 toast.success('Saved!', {
   description: 'Your changes have been saved',
   duration: 5000,
   icon: <CustomIcon />,
-  style: { borderRadius: 50 },
-  dismissible: false,
-  showCloseButton: false,
 });
 ```
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `description` | `string` | Toast description text |
+| `duration` | `number` | Display time in ms |
+| `icon` | `ReactNode \| (props) => ReactNode` | Custom icon component |
+| `style` | `ViewStyle` | Toast container style overrides |
+| `titleStyle` | `TextStyle` | Title text style overrides |
+| `descriptionStyle` | `TextStyle` | Description text style overrides |
+| `dismissible` | `boolean` | Enable/disable swipe to dismiss |
+| `showCloseButton` | `boolean` | Show/hide the X button |
 
 ### BreadLoaf Config
 
 Customize all toasts globally via the `config` prop:
 
 ```tsx
-<BreadLoaf
-  config={{
-    position: 'bottom',        // 'top' | 'bottom'
-    offset: 10,                // extra spacing from edge
-    stacking: true,            // show multiple toasts
-    maxStack: 3,               // max visible toasts
-    dismissible: true,         // swipe to dismiss
-    showCloseButton: true,     // show X button
-    defaultDuration: 4000,     // display time in ms
-    colors: {
-      success: { accent: '#22c55e', background: '#f0fdf4' },
-      error: { accent: '#ef4444', background: '#fef2f2' },
-      info: { accent: '#eab308', background: '#fefce8' },
-      loading: { accent: '#333', background: '#fff' },
-    },
-    toastStyle: { borderRadius: 12 },
-    titleStyle: { fontSize: 15 },
-    descriptionStyle: { fontSize: 13 },
-  }}
->
+<BreadLoaf config={{ position: 'bottom', stacking: false }}>
   <App />
 </BreadLoaf>
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `position` | `'top' \| 'bottom'` | `'top'` | Where toasts appear |
+| `offset` | `number` | `0` | Extra spacing from screen edge (px) |
+| `stacking` | `boolean` | `true` | Show multiple toasts stacked |
+| `maxStack` | `number` | `3` | Max visible toasts when stacking |
+| `dismissible` | `boolean` | `true` | Allow swipe to dismiss |
+| `showCloseButton` | `boolean` | `true` | Show X button (except loading toasts) |
+| `defaultDuration` | `number` | `4000` | Default display time (ms) |
+| `colors` | `object` | — | Colors per toast type (see below) |
+| `icons` | `object` | — | Custom icons per toast type |
+| `toastStyle` | `ViewStyle` | — | Global toast container styles |
+| `titleStyle` | `TextStyle` | — | Global title text styles |
+| `descriptionStyle` | `TextStyle` | — | Global description text styles |
+
+#### Colors
+
+Each toast type (`success`, `error`, `info`, `loading`) accepts:
+
+| Property | Description |
+|----------|-------------|
+| `accent` | Icon and title color |
+| `background` | Toast background color |
+
+```tsx
+colors: {
+  success: { accent: '#22c55e', background: '#f0fdf4' },
+  error: { accent: '#ef4444', background: '#fef2f2' },
+}
 ```
 
 ## Known Limitations

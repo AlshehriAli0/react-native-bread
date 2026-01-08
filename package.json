@@ -1,7 +1,7 @@
 {
   "name": "react-native-bread-monorepo",
   "private": true,
-  "workspaces": ["packages/*", "example/expo/*"],
+  "workspaces": ["packages/*", "example/*"],
   "scripts": {
     "dev": "bun run --cwd example/expo/react-native-bread-example start",
     "build": "bun run --cwd packages/react-native-bread build",
