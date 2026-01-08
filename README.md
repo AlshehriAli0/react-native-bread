@@ -1,6 +1,6 @@
 # 🍞 react-native-bread
 
-A toast library for React Native with smooth animations and gesture support.
+A toast library for React Native with smooth 60FPS UI thread animations and gesture support.
 
 Built with an **imperative API** — just call `toast.success()` from anywhere. No hooks, no context imports needed.
 
