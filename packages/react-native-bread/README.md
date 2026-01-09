@@ -1,4 +1,4 @@
-# React Native Bread
+# React Native Bread 🍞
 
 An opinionated toast component for React Native. Inspired by @emilkowalski's Sonner, built for mobile with smooth 60fps animations and intuitive swipe gestures.
 
