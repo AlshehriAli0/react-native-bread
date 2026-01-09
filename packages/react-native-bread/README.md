@@ -30,16 +30,17 @@ bun add react-native-reanimated react-native-gesture-handler react-native-safe-a
 
 ## Quick Start
 
-Wrap your app with `<BreadLoaf>` and you're good to go:
+Add `<BreadLoaf />` to your root layout and you're good to go:
 
 ```tsx
 import { BreadLoaf } from 'react-native-bread';
 
 export default function App() {
   return (
-    <BreadLoaf>
+    <>
       <YourApp />
-    </BreadLoaf>
+      <BreadLoaf />
+    </>
   );
 }
 ```
@@ -103,9 +104,7 @@ toast.success('Saved!', {
 Customize all toasts globally via the `config` prop:
 
 ```tsx
-<BreadLoaf config={{ position: 'bottom', stacking: false }}>
-  <App />
-</BreadLoaf>
+<BreadLoaf config={{ position: 'bottom', stacking: false }} />
 ```
 
 | Option | Type | Default | Description |

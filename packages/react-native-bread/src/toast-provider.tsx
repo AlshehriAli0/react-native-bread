@@ -1,11 +1,10 @@
-import { type ReactNode, useEffect } from "react";
+import { useEffect } from "react";
 import { StyleSheet, View } from "react-native";
 import { ToastContainer } from "./toast";
 import { toastStore } from "./toast-store";
 import type { ToastConfig } from "./types";
 
 interface BreadLoafProps {
-  children: ReactNode;
   /**
    * Configuration for customizing toast behavior and appearance.
    * All properties are optional and will be merged with defaults.
@@ -23,17 +22,22 @@ interface BreadLoafProps {
 }
 
 /**
- * Toast provider component that enables toast notifications in your app.
- * Wrap your root component with `<BreadLoaf>` to start showing toasts.
+ * Toast component that enables toast notifications in your app.
+ * Add `<BreadLoaf />` to your root layout to start showing toasts.
  *
  * @example
  * ```tsx
  * import { BreadLoaf } from 'react-native-bread';
  *
- * // Basic usage
- * <BreadLoaf>
- *   <App />
- * </BreadLoaf>
+ * // Basic usage - add to your root layout
+ * export default function RootLayout() {
+ *   return (
+ *     <>
+ *       <Stack />
+ *       <BreadLoaf />
+ *     </>
+ *   );
+ * }
  *
  * // With configuration
  * <BreadLoaf
@@ -47,34 +51,26 @@ interface BreadLoafProps {
  *     },
  *     toastStyle: { borderRadius: 12 },
  *   }}
- * >
- *   <App />
- * </BreadLoaf>
+ * />
  * ```
  */
-export function BreadLoaf({ children, config }: BreadLoafProps) {
+export function BreadLoaf({ config }: BreadLoafProps) {
   useEffect(() => {
     toastStore.setConfig(config);
     return () => {
-      // Reset to defaults when this provider unmounts
       toastStore.setConfig(undefined);
     };
   }, [config]);
+
   return (
-    <View style={styles.root}>
-      {children}
-      <View style={styles.portalContainer} pointerEvents="box-none">
-        <ToastContainer />
-      </View>
+    <View style={styles.container} pointerEvents="box-none">
+      <ToastContainer />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
-  portalContainer: {
+  container: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 9999,
   },

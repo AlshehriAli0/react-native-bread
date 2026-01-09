@@ -26,40 +26,41 @@ export default function GlobalConfigScreen() {
   };
 
   return (
-    <BreadLoaf
-      config={{
-        position,
-        stacking,
-        maxStack,
-        dismissible,
-        showCloseButton,
-        offset: 8,
-        defaultDuration: 4000,
-        ...(customStyle && {
-          toastStyle: {
-            borderRadius: 30,
-            paddingHorizontal: 20,
-            paddingVertical: 14,
-            borderWidth: 2,
-            borderColor: "#e5e7eb",
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 8 },
-            shadowOpacity: 0.15,
-            shadowRadius: 24,
-            elevation: 12,
-          },
-          titleStyle: {
-            fontSize: 15,
-            fontWeight: "700",
-            letterSpacing: 0.3,
-          },
-          descriptionStyle: {
-            fontSize: 13,
-            fontStyle: "italic",
-          },
-        }),
-      }}
-    >
+    <>
+      <BreadLoaf
+        config={{
+          position,
+          stacking,
+          maxStack,
+          dismissible,
+          showCloseButton,
+          offset: 8,
+          defaultDuration: 4000,
+          ...(customStyle && {
+            toastStyle: {
+              borderRadius: 30,
+              paddingHorizontal: 20,
+              paddingVertical: 14,
+              borderWidth: 2,
+              borderColor: "#e5e7eb",
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 8 },
+              shadowOpacity: 0.15,
+              shadowRadius: 24,
+              elevation: 12,
+            },
+            titleStyle: {
+              fontSize: 15,
+              fontWeight: "700",
+              letterSpacing: 0.3,
+            },
+            descriptionStyle: {
+              fontSize: 13,
+              fontStyle: "italic",
+            },
+          }),
+        }}
+      />
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <View style={styles.header}>
           <Text style={styles.title}>⚙️ Global Config</Text>
@@ -162,7 +163,7 @@ export default function GlobalConfigScreen() {
           </Pressable>
         </View>
       </ScrollView>
-    </BreadLoaf>
+    </>
   );
 }
 

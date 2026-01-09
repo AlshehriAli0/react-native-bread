@@ -1,4 +1,5 @@
 import { Stack } from "expo-router";
+import { BreadLoaf } from "react-native-bread";
 
 export default function GlobalLayout() {
   return (
