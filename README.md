@@ -1,56 +1,91 @@
-# 🍞 react-native-bread
+# React Native Bread
 
-Drop-in toast notifications for React Native. Clean Sonner like API, buttery 60fps animations, swipe-to-dismiss, and fully customizable.
-
-```tsx
-toast.success('Saved!');  // That's it. No hooks, no context.
-```
-
-
+An opinionated toast component for React Native. Inspired by @emilkowalski's Sonner, built for mobile with smooth 60fps animations and intuitive swipe gestures.
 
 https://github.com/user-attachments/assets/8a862dba-422c-4573-9f12-0a36cf6efe49
+
+## Features
+
+- Clean, imperative API inspired by [Sonner](https://sonner.emilkowal.ski/)
+- Zero setup - add one component, start toasting. No hooks, no providers
+- Built for mobile with smooth 60fps animations via Reanimated 3
+- Natural swipe gestures that feel native to the platform
+- Multiple toast types: `success`, `error`, `info`, and `promise`
+- Promise handling with automatic loading → success/error states
+- Toast stacking with configurable limits
+- Position toasts at top or bottom of screen
+- Completely customizable - colors, icons, styles, animations
+- Full Expo compatibility
+- Imperative API works anywhere - components, utilities, event handlers
 
 
 
 ## Installation
 
-```bash
-bun add react-native-bread
-# or any package manager
+```sh
+npm install react-native-bread
 ```
 
-### Peer Dependencies
+#### Requirements
 
-You'll need these installed and configured in your project:
+To use this package, **you also need to install its peer dependencies**. Check out their documentation for more information:
 
-```bash
-bun add react-native-reanimated react-native-gesture-handler react-native-safe-area-context react-native-svg react-native-worklets
-```
+- [React Native Reanimated](https://docs.swmansion.com/react-native-reanimated/docs/fundamentals/getting-started)
+- [React Native Gesture Handler](https://docs.swmansion.com/react-native-gesture-handler/docs/)
+- [React Native Safe Area Context](https://docs.expo.dev/versions/latest/sdk/safe-area-context/)
+- [React Native SVG](https://github.com/software-mansion/react-native-svg)
+- [React Native Worklets](https://github.com/margelo/react-native-worklets-core)
 
 
-## Quick Start
+## Usage
 
-Add `<BreadLoaf />` to your root layout and you're good to go:
+### In your App.tsx/entry point
 
 ```tsx
 import { BreadLoaf } from 'react-native-bread';
 
-export default function App() {
+function App() {
+  return (
+    <View>
+      <NavigationContainer>...</NavigationContainer>
+      <BreadLoaf />
+    </View>
+  );
+}
+```
+
+### Expo Router
+
+When using Expo Router, place the `BreadLoaf` component in your root layout file (`app/_layout.tsx`):
+
+```tsx
+import { BreadLoaf } from 'react-native-bread';
+import { Stack } from 'expo-router';
+
+export default function RootLayout() {
   return (
     <>
-      <YourApp />
+      <Stack>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="+not-found" />
+      </Stack>
       <BreadLoaf />
     </>
   );
 }
 ```
 
-Then show toasts from anywhere:
+This ensures the toasts will be displayed across all screens in your app.
+
+### Show a toast
 
 ```tsx
 import { toast } from 'react-native-bread';
 
-// Basic toasts
+// Basic usage
+toast.success('Saved!');
+
+// With description
 toast.success('Saved!', 'Your changes have been saved');
 toast.error('Error', 'Something went wrong');
 toast.info('Tip', 'Swipe to dismiss');
@@ -63,85 +98,68 @@ toast.promise(fetchData(), {
 });
 ```
 
-## API
-
-### Toast Methods
-
-| Method | Description |
-|--------|-------------|
-| `toast.success(title, description?)` | Green checkmark toast |
-| `toast.error(title, description?)` | Red X toast |
-| `toast.info(title, description?)` | Yellow info toast |
-| `toast.promise(promise, messages)` | Loading → success/error toast |
-| `toast.dismiss(id)` | Dismiss a specific toast |
-| `toast.dismissAll()` | Dismiss all toasts |
+## Customization
 
 ### Per-Toast Options
 
-Instead of a description string, you can pass an options object as the second argument:
+Pass an options object as the second argument to customize individual toasts:
 
 ```tsx
 toast.success('Saved!', {
   description: 'Your changes have been saved',
   duration: 5000,
   icon: <CustomIcon />,
+  style: { backgroundColor: '#fff' },
+  dismissible: true,
+  showCloseButton: true,
 });
 ```
 
-| Option | Type | Description |
-|--------|------|-------------|
-| `description` | `string` | Toast description text |
-| `duration` | `number` | Display time in ms |
-| `icon` | `ReactNode \| (props) => ReactNode` | Custom icon component |
-| `style` | `ViewStyle` | Toast container style overrides |
-| `titleStyle` | `TextStyle` | Title text style overrides |
-| `descriptionStyle` | `TextStyle` | Description text style overrides |
-| `dismissible` | `boolean` | Enable/disable swipe to dismiss |
-| `showCloseButton` | `boolean` | Show/hide the X button |
+### Global Configuration
 
-### BreadLoaf Config
-
-Customize all toasts globally via the `config` prop:
+Customize all toasts globally via the `config` prop on `<BreadLoaf />`:
 
 ```tsx
-<BreadLoaf config={{ position: 'bottom', stacking: false }} />
+<BreadLoaf
+  config={{
+    position: 'bottom',
+    stacking: true,
+    maxStack: 3,
+    defaultDuration: 4000,
+    colors: {
+      success: { accent: '#22c55e', background: '#f0fdf4' },
+      error: { accent: '#ef4444', background: '#fef2f2' },
+    }
+  }}
+/>
 ```
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `position` | `'top' \| 'bottom'` | `'top'` | Where toasts appear |
-| `offset` | `number` | `0` | Extra spacing from screen edge (px) |
-| `stacking` | `boolean` | `true` | Show multiple toasts stacked |
-| `maxStack` | `number` | `3` | Max visible toasts when stacking |
-| `dismissible` | `boolean` | `true` | Allow swipe to dismiss |
-| `showCloseButton` | `boolean` | `true` | Show X button (except loading toasts) |
-| `defaultDuration` | `number` | `4000` | Default display time (ms) |
-| `colors` | `object` | — | Colors per toast type (see below) |
-| `icons` | `object` | — | Custom icons per toast type |
-| `toastStyle` | `ViewStyle` | — | Global toast container styles |
-| `titleStyle` | `TextStyle` | — | Global title text styles |
-| `descriptionStyle` | `TextStyle` | — | Global description text styles |
+Available options include:
+- **position**: `'top' | 'bottom'` - Where toasts appear
+- **offset**: Extra spacing from screen edge
+- **stacking**: Show multiple toasts stacked
+- **maxStack**: Max visible toasts when stacking
+- **dismissible**: Allow swipe to dismiss
+- **showCloseButton**: Show X button
+- **defaultDuration**: Default display time in ms
+- **colors**: Custom colors per toast type
+- **icons**: Custom icons per toast type
+- **toastStyle**, **titleStyle**, **descriptionStyle**: Global style overrides
 
-#### Colors
+## API Reference
 
-Each toast type (`success`, `error`, `info`, `loading`) accepts:
+| Method | Description |
+|--------|-------------|
+| `toast.success(title, description?)` | Show success toast |
+| `toast.error(title, description?)` | Show error toast |
+| `toast.info(title, description?)` | Show info toast |
+| `toast.promise(promise, messages)` | Show loading → success/error toast |
+| `toast.dismiss(id)` | Dismiss a specific toast |
+| `toast.dismissAll()` | Dismiss all toasts |
 
-| Property | Description |
-|----------|-------------|
-| `accent` | Icon and title color |
-| `background` | Toast background color |
+## Known Issues
 
-```tsx
-colors: {
-  success: { accent: '#22c55e', background: '#f0fdf4' },
-  error: { accent: '#ef4444', background: '#fef2f2' },
-}
-```
+**Modal Overlays**: Toasts may render behind React Native's `<Modal>` component since modals are mounted at the native layer.
 
-## Known Limitations
+**Solution**: Use absolute positioning within your component tree instead of `<Modal>` for better toast visibility.
 
-### Toasts Behind Modals
-
-When you trigger a toast while opening a native modal (or transparent modal), the toast may appear **behind** the modal. This happens because React Native modals are mounted natively on top of everything.
-
-**Workaround**: Use a "contained" modal approach — render your modal content inside your regular component tree with absolute positioning, rather than using React Native's `<Modal>` component. This way toasts will appear on top as expected.
