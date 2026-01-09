@@ -1,6 +1,6 @@
 # React Native Bread 🍞
 
-An opinionated toast component for React Native. Inspired by @emilkowalski's Sonner, built for mobile with smooth 60fps animations and intuitive swipe gestures. Extremely lightweight.
+An extremely lightweight, opinionated toast component for React Native. Inspired by @emilkowalski's Sonner, built for mobile with smooth 60fps animations and intuitive swipe gestures.
 
 https://github.com/user-attachments/assets/8a862dba-422c-4573-9f12-0a36cf6efe49
 
@@ -160,7 +160,7 @@ Available options include:
 
 ## Known Issues
 
-**Modal Overlays**: Toasts may render behind React Native's `<Modal>` component since modals are mounted at the native layer.
+**Modal Pages**: Toasts may render behind React Native's `screenOptions={{ presentation: "modal" }}`  since they are mounted at the native layer above the whole app.
 
-**Solution**: Use absolute positioning within your component tree instead of `<Modal>` for better toast visibility.
+**Solution**: Use `screenOptions={{ presentation: "containedModal" }}`, or add another `<BreadLoaf>` inside the modal page.
 
