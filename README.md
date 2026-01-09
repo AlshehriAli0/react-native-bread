@@ -23,7 +23,7 @@ https://github.com/user-attachments/assets/8a862dba-422c-4573-9f12-0a36cf6efe49
 ## Installation
 
 ```sh
-npm install react-native-bread
+bun add react-native-bread
 ```
 
 #### Requirements
