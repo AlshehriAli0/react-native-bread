@@ -1,6 +1,6 @@
 {
   "name": "react-native-bread",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A delicious toast library for React Native with beautiful animations and gesture support",
   "main": "lib/commonjs/index.js",
   "module": "lib/module/index.js",
