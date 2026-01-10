@@ -446,6 +446,7 @@ const ToastItem = ({ toast, index, theme, position, isTopToast, registerTopToast
         styles.toast,
         isBottom ? styles.toastBottom : styles.toastTop,
         { backgroundColor: colors.background },
+        theme.rtl && styles.rtl,
         theme.toastStyle,
         options?.style,
         animatedStyle,
@@ -469,7 +470,13 @@ const ToastItem = ({ toast, index, theme, position, isTopToast, registerTopToast
         <Text
           maxFontSizeMultiplier={1.35}
           allowFontScaling={false}
-          style={[styles.title, { color: colors.accent }, theme.titleStyle, options?.titleStyle]}
+          style={[
+            styles.title,
+            { color: colors.accent },
+            theme.rtl && { textAlign: "right" },
+            theme.titleStyle,
+            options?.titleStyle,
+          ]}
         >
           {toast.title}
         </Text>
@@ -477,7 +484,12 @@ const ToastItem = ({ toast, index, theme, position, isTopToast, registerTopToast
           <Text
             allowFontScaling={false}
             maxFontSizeMultiplier={1.35}
-            style={[styles.description, theme.descriptionStyle, options?.descriptionStyle]}
+            style={[
+              styles.description,
+              theme.rtl && { textAlign: "right" },
+              theme.descriptionStyle,
+              options?.descriptionStyle,
+            ]}
           >
             {toast.description}
           </Text>
@@ -534,6 +546,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 24,
     elevation: 8,
+  },
+  rtl: {
+    flexDirection: "row-reverse",
   },
   toastTop: {
     top: 0,

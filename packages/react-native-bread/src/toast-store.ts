@@ -8,6 +8,7 @@ const EXIT_DURATION = 350;
 const DEFAULT_THEME: ToastTheme = {
   position: "top",
   offset: 0,
+  rtl: false,
   stacking: true,
   maxStack: 3,
   dismissible: true,
@@ -45,6 +46,7 @@ function mergeConfig(config: ToastConfig | undefined): ToastTheme {
   return {
     position: config.position ?? DEFAULT_THEME.position,
     offset: config.offset ?? DEFAULT_THEME.offset,
+    rtl: config.rtl ?? DEFAULT_THEME.rtl,
     stacking: config.stacking ?? DEFAULT_THEME.stacking,
     maxStack: config.maxStack ?? DEFAULT_THEME.maxStack,
     dismissible: config.dismissible ?? DEFAULT_THEME.dismissible,

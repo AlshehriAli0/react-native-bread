@@ -14,6 +14,7 @@ export default function GlobalConfigScreen() {
   const [dismissible, setDismissible] = useState(true);
   const [showCloseButton, setShowCloseButton] = useState(true);
   const [customStyle, setCustomStyle] = useState(true);
+  const [rtl, setRtl] = useState(false);
 
   const showToast = () => {
     toast.success("Hello!", "This toast uses the global config");
@@ -34,6 +35,7 @@ export default function GlobalConfigScreen() {
           maxStack,
           dismissible,
           showCloseButton,
+          rtl,
           offset: 8,
           defaultDuration: 4000,
           ...(customStyle && {
@@ -134,6 +136,14 @@ export default function GlobalConfigScreen() {
               <Text style={styles.optionDesc}>Display X button on toasts</Text>
             </View>
             <Switch value={showCloseButton} onValueChange={setShowCloseButton} />
+          </View>
+
+          <View style={styles.option}>
+            <View>
+              <Text style={styles.optionLabel}>RTL Layout</Text>
+              <Text style={styles.optionDesc}>Right-to-left text direction</Text>
+            </View>
+            <Switch value={rtl} onValueChange={setRtl} />
           </View>
 
           <View style={styles.option}>

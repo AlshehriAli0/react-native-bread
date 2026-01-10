@@ -6,16 +6,17 @@ An extremely lightweight, opinionated toast component for React Native.
 
 ## Features
 
-- **Extremely lightweight** package, only 13.8KB packed size 
+- **Extremely lightweight** package, only 14KB packed size
 - Clean, imperative API inspired by [Sonner](https://sonner.emilkowal.ski/)
 - Zero setup - add one component, start toasting. No hooks, no providers
-- Built for mobile with smooth 60fps animations powered by Reanimated 
+- Built for mobile with smooth 60fps animations powered by Reanimated
 - Natural swipe gestures that feel native to the platform
 - Multiple toast types: `success`, `error`, `info`, and `promise`
 - Promise handling with automatic loading → success/error states
 - Complex animations and gestures but with high performance
 - Toast stacking with configurable limits
 - Position toasts at top or bottom of screen
+- **RTL built-in support** - perfect for Arabic and other RTL languages
 - Completely customizable - colors, icons, styles, animations
 - Full Expo compatibility
 - Imperative API works anywhere - components, utilities, event handlers
@@ -125,6 +126,7 @@ Customize all toasts globally via the `config` prop on `<BreadLoaf />`:
 <BreadLoaf
   config={{
     position: 'bottom',
+    rtl: false, // Enable for RTL languages
     stacking: true,
     maxStack: 3,
     defaultDuration: 4000,

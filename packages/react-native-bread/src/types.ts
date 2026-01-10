@@ -28,6 +28,8 @@ export interface ToastTheme {
   position: ToastPosition;
   /** Extra offset from safe area edge (in addition to safe area insets) */
   offset: number;
+  /** Enable right-to-left layout (reverses icon/text order) */
+  rtl: boolean;
   /** Whether to show multiple toasts stacked (default: true). When false, only one toast shows at a time. */
   stacking: boolean;
   /** Maximum number of toasts visible at once when stacking is enabled (default: 3) */
