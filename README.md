@@ -1,18 +1,19 @@
 # React Native Bread 🍞
 
-An extremely lightweight, opinionated toast component for React Native. Inspired by @emilkowalski's Sonner, built for mobile with smooth 60fps animations and intuitive swipe gestures.
+An extremely lightweight, opinionated toast component for React Native. Inspired by Sonner, built for mobile with smooth premium-feeling 60fps animations and complex swipe gestures.
 
 https://github.com/user-attachments/assets/8a862dba-422c-4573-9f12-0a36cf6efe49
 
 ## Features
 
-- **Extremely lightweight** package, only 13.8KB packed size
+- **Extremely lightweight** package, only 13.8KB packed size 
 - Clean, imperative API inspired by [Sonner](https://sonner.emilkowal.ski/)
 - Zero setup - add one component, start toasting. No hooks, no providers
-- Built for mobile with smooth 60fps animations via Reanimated 3
+- Built for mobile with smooth 60fps animations powered by Reanimated 
 - Natural swipe gestures that feel native to the platform
 - Multiple toast types: `success`, `error`, `info`, and `promise`
 - Promise handling with automatic loading → success/error states
+- Complex animations and gestures but with high performance
 - Toast stacking with configurable limits
 - Position toasts at top or bottom of screen
 - Completely customizable - colors, icons, styles, animations

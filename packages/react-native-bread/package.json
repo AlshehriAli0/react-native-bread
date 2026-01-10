@@ -1,7 +1,7 @@
 {
   "name": "react-native-bread",
   "version": "0.2.0",
-  "description": "A lightweight toast library for React Native with premium-feeling animations and complex gesture support",
+  "description": "A lightweight sonner-inspired toast library for React Native with premium-feeling animations and complex gesture support",
   "main": "lib/commonjs/index.js",
   "module": "lib/module/index.js",
   "types": "lib/typescript/index.d.ts",
