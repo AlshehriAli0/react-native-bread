@@ -1,8 +1,8 @@
 # React Native Bread 🍞
 
-An extremely lightweight, opinionated toast component for React Native. Inspired by Sonner, built for mobile with smooth premium-feeling 60fps animations and complex swipe gestures.
+An extremely lightweight, opinionated toast component for React Native.
 
-https://github.com/user-attachments/assets/8a862dba-422c-4573-9f12-0a36cf6efe49
+![demo](https://github.com/user-attachments/assets/860d9d19-66f4-4fc6-a992-2d161e2e8bad)
 
 ## Features
 
