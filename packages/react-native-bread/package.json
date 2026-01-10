@@ -1,7 +1,7 @@
 {
   "name": "react-native-bread",
-  "version": "0.1.3",
-  "description": "A lightweight toast library for React Native with beautiful animations and gesture support",
+  "version": "0.2.0",
+  "description": "A lightweight toast library for React Native with premium-feeling animations and complex gesture support",
   "main": "lib/commonjs/index.js",
   "module": "lib/module/index.js",
   "types": "lib/typescript/index.d.ts",
@@ -18,7 +18,18 @@
     "url": "https://github.com/AlshehriAli0/react-native-bread/issues"
   },
   "homepage": "https://github.com/AlshehriAli0/react-native-bread#readme",
-  "keywords": ["react-native", "toast", "notification", "snackbar", "bread", "animation", "gesture", "reanimated"],
+  "keywords": [
+    "react-native",
+    "toast",
+    "react-native-toast",
+    "react-hot-toast",
+    "notification",
+    "snackbar",
+    "bread",
+    "animation",
+    "gesture",
+    "reanimated"
+  ],
   "scripts": {
     "build": "bob build",
     "minify": "find lib -name '*.js' -not -path '*/node_modules/*' -exec terser {} -o {} -c directives=false -m --module \\;",

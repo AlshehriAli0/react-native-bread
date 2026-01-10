@@ -4,8 +4,9 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   Easing,
   interpolate,
+  makeMutable,
+  type SharedValue,
   useAnimatedStyle,
-  useDerivedValue,
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
@@ -15,386 +16,482 @@ import { CloseIcon, GreenCheck, InfoIcon, RedX } from "./icons";
 import { type Toast as ToastData, type ToastState, type ToastType, toastStore } from "./toast-store";
 import type { IconRenderFn, ToastPosition, ToastTheme } from "./types";
 
+// ============================================================================
+// Constants
+// ============================================================================
+
 const ICON_SIZE = 28;
+const POOL_SIZE = 5;
 
-/** Memoized default icons to prevent SVG re-renders */
-const MemoizedGreenCheck = memo(({ fill }: { fill: string }) => <GreenCheck width={36} height={36} fill={fill} />);
-const MemoizedRedX = memo(({ fill }: { fill: string }) => <RedX width={ICON_SIZE} height={ICON_SIZE} fill={fill} />);
-const MemoizedInfoIcon = memo(({ fill }: { fill: string }) => (
-  <InfoIcon width={ICON_SIZE} height={ICON_SIZE} fill={fill} />
-));
-const MemoizedCloseIcon = memo(() => <CloseIcon width={20} height={20} />);
+// Animation timing
+const ENTRY_DURATION = 400;
+const EXIT_DURATION = 350;
+const STACK_TRANSITION_DURATION = 300;
+const SPRING_BACK_DURATION = 650;
+const ICON_ANIMATION_DURATION = 350;
 
-/** Default icon for each toast type - memoized */
-const DefaultIcon = memo(({ type, accentColor }: { type: ToastType; accentColor: string }) => {
-  switch (type) {
-    case "success":
-      return <MemoizedGreenCheck fill={accentColor} />;
-    case "error":
-      return <MemoizedRedX fill={accentColor} />;
-    case "loading":
-      return <ActivityIndicator size={ICON_SIZE} color={accentColor} />;
-    case "info":
-      return <MemoizedInfoIcon fill={accentColor} />;
-    default:
-      return <MemoizedGreenCheck fill={accentColor} />;
-  }
-});
+// Animation values
+const ENTRY_OFFSET = 80;
+const EXIT_OFFSET = 100;
+const SWIPE_EXIT_OFFSET = 200;
+const MAX_DRAG_CLAMP = 180;
+const MAX_DRAG_RESISTANCE = 60;
+const DISMISS_THRESHOLD = 40;
+const DISMISS_VELOCITY_THRESHOLD = 300;
 
-interface AnimatedIconProps {
-  type: ToastType;
-  accentColor: string;
-  customIcon?: ReactNode | IconRenderFn;
-  configIcon?: IconRenderFn;
+// Stack animation
+const STACK_OFFSET_PER_ITEM = 10;
+const STACK_SCALE_PER_ITEM = 0.05;
+
+// Shared easing curve
+const EASING = Easing.bezier(0.25, 0.1, 0.25, 1.0);
+
+// ============================================================================
+// Animation Pool - Module level, created once outside React
+// ============================================================================
+
+// Animation values only - passed to worklets
+interface AnimSlot {
+  progress: SharedValue<number>;
+  translationY: SharedValue<number>;
+  stackIndex: SharedValue<number>;
 }
 
-/** Resolves the icon to render - checks per-toast, then config, then default */
-const resolveIcon = (
-  type: ToastType,
-  accentColor: string,
-  customIcon?: ReactNode | IconRenderFn,
-  configIcon?: IconRenderFn
-): ReactNode => {
-  if (customIcon) {
-    if (typeof customIcon === "function") {
-      return customIcon({ color: accentColor, size: ICON_SIZE });
+// JS-only tracking state - never passed to worklets
+interface SlotTracker {
+  wasExiting: boolean;
+  prevIndex: number;
+  initialized: boolean;
+}
+
+// Pre-create all animation state outside React - no per-toast hook overhead
+const animationPool: AnimSlot[] = Array.from({ length: POOL_SIZE }, () => ({
+  progress: makeMutable(0),
+  translationY: makeMutable(0),
+  stackIndex: makeMutable(0),
+}));
+
+// JS-only tracking state - kept separate to avoid worklet serialization issues
+const slotTrackers: SlotTracker[] = Array.from({ length: POOL_SIZE }, () => ({
+  wasExiting: false,
+  prevIndex: 0,
+  initialized: false,
+}));
+
+// Track slot assignments
+const slotAssignments = new Map<string, number>();
+const usedSlots = new Set<number>();
+
+const getSlotIndex = (toastId: string): number => {
+  if (slotAssignments.has(toastId)) {
+    return slotAssignments.get(toastId) ?? 0;
+  }
+  // Find free slot
+  for (let i = 0; i < POOL_SIZE; i++) {
+    if (!usedSlots.has(i)) {
+      slotAssignments.set(toastId, i);
+      usedSlots.add(i);
+      // Reset tracker state for new assignment
+      slotTrackers[i].initialized = false;
+      slotTrackers[i].wasExiting = false;
+      slotTrackers[i].prevIndex = 0;
+      return i;
     }
-    return customIcon;
   }
-  if (configIcon) {
-    return configIcon({ color: accentColor, size: ICON_SIZE });
-  }
-  return <DefaultIcon type={type} accentColor={accentColor} />;
+  // Fallback to first slot if all used
+  return 0;
 };
 
-/** Animated icon wrapper with scale/fade animation */
-const AnimatedIcon = memo(({ type, accentColor, customIcon, configIcon }: AnimatedIconProps) => {
-  const progress = useSharedValue(0);
+const releaseSlot = (toastId: string) => {
+  const idx = slotAssignments.get(toastId);
+  if (idx !== undefined) {
+    usedSlots.delete(idx);
+    slotAssignments.delete(toastId);
+    // Reset the tracker
+    slotTrackers[idx].initialized = false;
+    slotTrackers[idx].wasExiting = false;
+    slotTrackers[idx].prevIndex = 0;
+  }
+};
 
-  useEffect(() => {
-    progress.value = withTiming(1, { duration: 350, easing: Easing.out(Easing.back(1.5)) });
-  }, [progress]);
+// ============================================================================
+// Types
+// ============================================================================
 
-  const style = useAnimatedStyle(() => ({
-    opacity: progress.value,
-    transform: [{ scale: 0.7 + progress.value * 0.3 }],
-  }));
-
-  return <Animated.View style={style}>{resolveIcon(type, accentColor, customIcon, configIcon)}</Animated.View>;
-});
-
-interface ToastContentProps {
-  type: ToastType;
-  title: string;
-  description?: string;
-  accentColor: string;
-  customIcon?: ReactNode | IconRenderFn;
-  configIcon?: IconRenderFn;
-  showCloseButton: boolean;
-  onDismiss: () => void;
-  titleStyle?: object;
-  descriptionStyle?: object;
-  optionsTitleStyle?: object;
-  optionsDescriptionStyle?: object;
+interface TopToastRef {
+  slot: AnimSlot;
+  dismiss: () => void;
 }
-
-/** Memoized toast content to prevent inline JSX recreation */
-const ToastContent = memo(
-  ({
-    type,
-    title,
-    description,
-    accentColor,
-    customIcon,
-    configIcon,
-    showCloseButton,
-    onDismiss,
-    titleStyle,
-    descriptionStyle,
-    optionsTitleStyle,
-    optionsDescriptionStyle,
-  }: ToastContentProps) => (
-    <View style={styles.content}>
-      <View style={styles.icon}>
-        <AnimatedIcon key={type} type={type} accentColor={accentColor} customIcon={customIcon} configIcon={configIcon} />
-      </View>
-      <View style={styles.textContainer}>
-        <Text
-          maxFontSizeMultiplier={1.35}
-          allowFontScaling={false}
-          style={[styles.title, { color: accentColor }, titleStyle, optionsTitleStyle]}
-        >
-          {title}
-        </Text>
-        {description && (
-          <Text
-            allowFontScaling={false}
-            maxFontSizeMultiplier={1.35}
-            style={[styles.description, descriptionStyle, optionsDescriptionStyle]}
-          >
-            {description}
-          </Text>
-        )}
-      </View>
-      {showCloseButton && (
-        <Pressable style={styles.closeButton} onPress={onDismiss} hitSlop={12}>
-          <MemoizedCloseIcon />
-        </Pressable>
-      )}
-    </View>
-  )
-);
-
-// singleton instance
-export const ToastContainer = () => {
-  const [visibleToasts, setVisibleToasts] = useState<ToastData[]>([]);
-  const [theme, setTheme] = useState<ToastTheme>(() => toastStore.getTheme());
-  const { top, bottom } = useSafeAreaInsets();
-
-  useEffect(() => {
-    const initialState = toastStore.getState();
-    setVisibleToasts(initialState.visibleToasts);
-    setTheme(toastStore.getTheme());
-
-    return toastStore.subscribe((state: ToastState) => {
-      setVisibleToasts(state.visibleToasts);
-      setTheme(toastStore.getTheme());
-    });
-  }, []);
-
-  // Calculate visual index for each toast (exiting toasts don't count)
-  const getVisualIndex = useCallback(
-    (toastId: string) => {
-      let visualIndex = 0;
-      for (const t of visibleToasts) {
-        if (t.id === toastId) break;
-        if (!t.isExiting) visualIndex++;
-      }
-      return visualIndex;
-    },
-    [visibleToasts]
-  );
-
-  // Memoize the reversed array to avoid recreating on each render
-  const reversedToasts = useMemo(() => [...visibleToasts].reverse(), [visibleToasts]);
-
-  if (visibleToasts.length === 0) {
-    return null;
-  }
-
-  const isBottom = theme.position === "bottom";
-  const inset = isBottom ? bottom : top;
-  const positionStyle = isBottom ? { bottom: inset + theme.offset + 2 } : { top: inset + theme.offset + 2 };
-
-  return (
-    <View style={[styles.container, positionStyle]} pointerEvents="box-none">
-      {reversedToasts.map(toast => {
-        const index = toast.isExiting ? -1 : getVisualIndex(toast.id);
-        return <MemoizedToastItem key={toast.id} toast={toast} index={index} theme={theme} position={theme.position} />;
-      })}
-    </View>
-  );
-};
 
 interface ToastItemProps {
   toast: ToastData;
   index: number;
   theme: ToastTheme;
   position: ToastPosition;
+  isTopToast: boolean;
+  registerTopToast: (values: TopToastRef | null) => void;
 }
 
-const EASING = Easing.bezier(0.25, 0.1, 0.25, 1.0);
-const ToY = 0;
-const Duration = 400;
-const ExitDuration = 350;
-const MaxDragDown = 60;
+// Icon resolution - handles custom, config, and default icons
+const resolveIcon = (type: ToastType, color: string, custom?: ReactNode | IconRenderFn, config?: IconRenderFn) => {
+  if (custom) return typeof custom === "function" ? custom({ color, size: ICON_SIZE }) : custom;
+  if (config) return config({ color, size: ICON_SIZE });
+  switch (type) {
+    case "success":
+      return <GreenCheck width={36} height={36} fill={color} />;
+    case "error":
+      return <RedX width={ICON_SIZE} height={ICON_SIZE} fill={color} />;
+    case "loading":
+      return <ActivityIndicator size={ICON_SIZE} color={color} />;
+    case "info":
+      return <InfoIcon width={ICON_SIZE} height={ICON_SIZE} fill={color} />;
+    default:
+      return <GreenCheck width={36} height={36} fill={color} />;
+  }
+};
 
-const ToastItem = ({ toast, index, theme, position }: ToastItemProps) => {
-  const progress = useSharedValue(0);
-  const translationY = useSharedValue(0);
-  const isBeingDragged = useSharedValue(false);
+// Only used for promise resolution (loading -> success/error)
+const AnimatedIcon = memo(
+  ({
+    type,
+    color,
+    custom,
+    config,
+  }: {
+    type: ToastType;
+    color: string;
+    custom?: ReactNode | IconRenderFn;
+    config?: IconRenderFn;
+  }) => {
+    const progress = useSharedValue(0);
+
+    useEffect(() => {
+      progress.value = withTiming(1, {
+        duration: ICON_ANIMATION_DURATION,
+        easing: Easing.out(Easing.back(1.5)),
+      });
+    }, [progress]);
+
+    const style = useAnimatedStyle(() => ({
+      opacity: progress.value,
+      transform: [{ scale: 0.7 + progress.value * 0.3 }],
+    }));
+
+    return <Animated.View style={style}>{resolveIcon(type, color, custom, config)}</Animated.View>;
+  }
+);
+
+// ============================================================================
+// Toast Container (singleton)
+// ============================================================================
+
+export const ToastContainer = () => {
+  const [visibleToasts, setVisibleToasts] = useState<ToastData[]>([]);
+  const [theme, setTheme] = useState<ToastTheme>(() => toastStore.getTheme());
+  const { top, bottom } = useSafeAreaInsets();
+
+  // Mutable refs accessible from worklets - avoids gesture recreation
+  const topToastRef = useRef(makeMutable<TopToastRef | null>(null));
+  const isBottomRef = useRef(makeMutable(theme.position === "bottom"));
+  const isDismissibleRef = useRef(makeMutable(true));
   const shouldDismiss = useSharedValue(false);
 
-  // Position-based animation values
-  const isBottom = position === "bottom";
-  const entryFromY = isBottom ? 80 : -80;
-  const exitToY = isBottom ? 100 : -100;
-
-  // Stack position animation
-  const stackIndex = useSharedValue(index);
-
-  // Refs for tracking previous values to avoid unnecessary animations
-  const lastHandledType = useRef(toast.type);
-  const prevIndex = useRef(index);
-  const hasEntered = useRef(false);
-
   useEffect(() => {
-    // Entry animation (only once on mount)
-    if (!hasEntered.current && !toast.isExiting) {
-      progress.value = withTiming(1, { duration: Duration, easing: EASING });
-      hasEntered.current = true;
+    setVisibleToasts(toastStore.getState().visibleToasts);
+
+    // RAF batching to prevent iOS FPS drops from rapid state updates
+    let pendingToasts: ToastData[] | null = null;
+    let rafId: number | null = null;
+
+    return toastStore.subscribe((state: ToastState) => {
+      pendingToasts = state.visibleToasts;
+      if (rafId === null) {
+        rafId = requestAnimationFrame(() => {
+          if (pendingToasts) {
+            setVisibleToasts(pendingToasts);
+            pendingToasts = null;
+          }
+          rafId = null;
+          const newTheme = toastStore.getTheme();
+          setTheme(prev => (prev === newTheme ? prev : newTheme));
+        });
+      }
+    });
+  }, []);
+
+  // Pre-compute visual indices once
+  const toastsWithIndex = useMemo(() => {
+    const indices = new Map<string, number>();
+    let visualIndex = 0;
+    for (const t of visibleToasts) {
+      indices.set(t.id, t.isExiting ? -1 : visualIndex);
+      if (!t.isExiting) visualIndex++;
     }
+    // Reverse for rendering (newest on top in z-order)
+    return [...visibleToasts].reverse().map(t => ({
+      toast: t,
+      index: indices.get(t.id) ?? 0,
+    }));
+  }, [visibleToasts]);
 
-    // Exit animation when isExiting becomes true
-    if (toast.isExiting) {
-      progress.value = withTiming(0, { duration: ExitDuration, easing: EASING });
-      translationY.value = withTiming(exitToY, { duration: ExitDuration, easing: EASING });
-    }
+  const isBottom = theme.position === "bottom";
+  const topToast = visibleToasts.find(t => !t.isExiting);
+  const isTopDismissible = topToast?.options?.dismissible ?? theme.dismissible;
 
-    // Track type changes (for icon animation via key)
-    if (toast.type !== lastHandledType.current) {
-      lastHandledType.current = toast.type;
-    }
+  // Update mutable refs when values change (in effect to avoid render-time writes)
+  useEffect(() => {
+    isBottomRef.current.value = isBottom;
+    isDismissibleRef.current.value = isTopDismissible;
+  }, [isBottom, isTopDismissible]);
 
-    // Stack position animation when index changes
-    if (index >= 0 && prevIndex.current !== index) {
-      stackIndex.value = withTiming(index, { duration: 300, easing: EASING });
-      prevIndex.current = index;
-    }
-  }, [toast.isExiting, toast.type, index, progress, translationY, stackIndex, exitToY]);
-
-  const dismissToast = useCallback(() => {
-    toastStore.hide(toast.id);
-  }, [toast.id]);
-
+  // Single gesture handler - reads from refs so it never needs recreation
   const panGesture = useMemo(
     () =>
       Gesture.Pan()
         .onStart(() => {
           "worklet";
-          isBeingDragged.value = true;
           shouldDismiss.value = false;
         })
         .onUpdate(event => {
           "worklet";
+          if (!isDismissibleRef.current.value) return;
+          const ref = topToastRef.current.value;
+          if (!ref) return;
+
+          const { slot } = ref;
+          const bottom = isBottomRef.current.value;
           const rawY = event.translationY;
-          // For top: negative Y = dismiss direction, positive Y = resistance
-          // For bottom: positive Y = dismiss direction, negative Y = resistance
-          const dismissDrag = isBottom ? rawY : -rawY;
-          const resistDrag = isBottom ? -rawY : rawY;
+          const dismissDrag = bottom ? rawY : -rawY;
+          const resistDrag = bottom ? -rawY : rawY;
 
           if (dismissDrag > 0) {
-            // Moving toward dismiss direction
-            const clampedY = isBottom ? Math.min(rawY, 180) : Math.max(rawY, -180);
-            translationY.value = clampedY;
-            if (dismissDrag > 40 || (isBottom ? event.velocityY > 300 : event.velocityY < -300)) {
-              shouldDismiss.value = true;
-            }
+            // Dragging toward dismiss direction
+            const clampedY = bottom ? Math.min(rawY, MAX_DRAG_CLAMP) : Math.max(rawY, -MAX_DRAG_CLAMP);
+            slot.translationY.value = clampedY;
+
+            const shouldTriggerDismiss =
+              dismissDrag > DISMISS_THRESHOLD ||
+              (bottom ? event.velocityY > DISMISS_VELOCITY_THRESHOLD : event.velocityY < -DISMISS_VELOCITY_THRESHOLD);
+            shouldDismiss.value = shouldTriggerDismiss;
           } else {
-            // Moving away from edge - apply resistance
-            const exponentialDrag = MaxDragDown * (1 - Math.exp(-resistDrag / 250));
-            translationY.value = isBottom
-              ? -Math.min(exponentialDrag, MaxDragDown)
-              : Math.min(exponentialDrag, MaxDragDown);
+            // Dragging away from edge - apply exponential resistance
+            const exponentialDrag = MAX_DRAG_RESISTANCE * (1 - Math.exp(-resistDrag / 250));
+            slot.translationY.value = bottom
+              ? -Math.min(exponentialDrag, MAX_DRAG_RESISTANCE)
+              : Math.min(exponentialDrag, MAX_DRAG_RESISTANCE);
             shouldDismiss.value = false;
           }
         })
         .onEnd(() => {
           "worklet";
-          isBeingDragged.value = false;
+          if (!isDismissibleRef.current.value) return;
+          const ref = topToastRef.current.value;
+          if (!ref) return;
 
+          const { slot } = ref;
+          const bottom = isBottomRef.current.value;
           if (shouldDismiss.value) {
-            progress.value = withTiming(0, {
-              duration: ExitDuration,
+            slot.progress.value = withTiming(0, { duration: EXIT_DURATION, easing: EASING });
+            const exitOffset = bottom ? SWIPE_EXIT_OFFSET : -SWIPE_EXIT_OFFSET;
+            slot.translationY.value = withTiming(slot.translationY.value + exitOffset, {
+              duration: EXIT_DURATION,
               easing: EASING,
             });
-            const exitOffset = isBottom ? 200 : -200;
-            translationY.value = withTiming(translationY.value + exitOffset, {
-              duration: ExitDuration,
-              easing: EASING,
-            });
-            scheduleOnRN(dismissToast);
+            scheduleOnRN(ref.dismiss);
           } else {
-            translationY.value = withTiming(0, {
-              duration: 650,
-              easing: EASING,
-            });
+            slot.translationY.value = withTiming(0, { duration: SPRING_BACK_DURATION, easing: EASING });
           }
         }),
-    [isBottom, dismissToast, progress, translationY, shouldDismiss, isBeingDragged]
+    [shouldDismiss]
   );
 
-  // Memoize disabled gesture to avoid recreation on every render
-  const disabledGesture = useMemo(() => Gesture.Pan().enabled(false), []);
+  const registerTopToast = useCallback((values: TopToastRef | null) => {
+    topToastRef.current.value = values;
+  }, []);
 
-  // Derive zIndex separately - it's not animatable and shouldn't trigger worklet re-runs
-  const zIndex = useDerivedValue(() => 1000 - Math.round(stackIndex.value));
+  if (visibleToasts.length === 0) return null;
 
+  const inset = isBottom ? bottom : top;
+  const positionStyle = isBottom ? { bottom: inset + theme.offset + 2 } : { top: inset + theme.offset + 2 };
+
+  return (
+    <GestureDetector gesture={panGesture}>
+      <View style={[styles.container, positionStyle]} pointerEvents="box-none">
+        {toastsWithIndex.map(({ toast, index }) => (
+          <MemoizedToastItem
+            key={toast.id}
+            toast={toast}
+            index={index}
+            theme={theme}
+            position={theme.position}
+            isTopToast={index === 0}
+            registerTopToast={registerTopToast}
+          />
+        ))}
+      </View>
+    </GestureDetector>
+  );
+};
+
+// ============================================================================
+// Toast Item - Animations triggered directly via shared value assignments
+// ============================================================================
+
+const ToastItem = ({ toast, index, theme, position, isTopToast, registerTopToast }: ToastItemProps) => {
+  // Get slot index from pool - store in ref so it persists
+  const slotIndexRef = useRef<number | null>(null);
+  if (slotIndexRef.current === null) {
+    slotIndexRef.current = getSlotIndex(toast.id);
+  }
+  const slotIdx = slotIndexRef.current;
+  const slot = animationPool[slotIdx];
+  const tracker = slotTrackers[slotIdx];
+
+  const isBottom = position === "bottom";
+  const entryFromY = isBottom ? ENTRY_OFFSET : -ENTRY_OFFSET;
+  const exitToY = isBottom ? EXIT_OFFSET : -EXIT_OFFSET;
+
+  const prevType = useRef(toast.type);
+  const [showIcon, setShowIcon] = useState(false);
+
+  // Release slot on unmount
+  useEffect(() => {
+    return () => {
+      releaseSlot(toast.id);
+    };
+  }, [toast.id]);
+
+  // Trigger entry animation on mount
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally run only on mount
+  useEffect(() => {
+    // Initialize and trigger entry animation
+    slot.progress.value = 0;
+    slot.translationY.value = 0;
+    slot.stackIndex.value = index;
+    slot.progress.value = withTiming(1, { duration: ENTRY_DURATION, easing: EASING });
+  }, []);
+
+  // Trigger exit animation when isExiting changes
+  useEffect(() => {
+    if (toast.isExiting && !tracker.wasExiting) {
+      tracker.wasExiting = true;
+      slot.progress.value = withTiming(0, { duration: EXIT_DURATION, easing: EASING });
+      slot.translationY.value = withTiming(exitToY, { duration: EXIT_DURATION, easing: EASING });
+    }
+  }, [toast.isExiting, slot, tracker, exitToY]);
+
+  // Trigger stack position animation when index changes
+  useEffect(() => {
+    if (tracker.initialized && index !== tracker.prevIndex) {
+      slot.stackIndex.value = withTiming(index, { duration: STACK_TRANSITION_DURATION, easing: EASING });
+    }
+    tracker.prevIndex = index;
+    tracker.initialized = true;
+  }, [index, slot, tracker]);
+
+  // Defer icon rendering until after entry animation starts
+  useEffect(() => {
+    const timeout = setTimeout(() => setShowIcon(true), 50);
+    return () => clearTimeout(timeout);
+  }, []);
+
+  // Only animate icon when transitioning from loading (promise resolution)
+  const shouldAnimateIcon = prevType.current === "loading" && toast.type !== "loading";
+  prevType.current = toast.type;
+
+  const dismissToast = useCallback(() => {
+    toastStore.hide(toast.id);
+  }, [toast.id]);
+
+  // Register with container when this is the top toast
+  useEffect(() => {
+    if (isTopToast) {
+      registerTopToast({ slot, dismiss: dismissToast });
+      return () => registerTopToast(null);
+    }
+  }, [isTopToast, registerTopToast, slot, dismissToast]);
+
+  // Animated style - all computation happens on UI thread
   const animatedStyle = useAnimatedStyle(() => {
-    const baseTranslateY = interpolate(progress.value, [0, 1], [entryFromY, ToY]);
+    const baseTranslateY = interpolate(slot.progress.value, [0, 1], [entryFromY, 0]);
+    const stackOffsetY = isBottom
+      ? slot.stackIndex.value * STACK_OFFSET_PER_ITEM
+      : slot.stackIndex.value * -STACK_OFFSET_PER_ITEM;
+    const stackScale = 1 - slot.stackIndex.value * STACK_SCALE_PER_ITEM;
 
-    // Stack offset: each toast behind moves away from edge (up for top, down for bottom)
-    const stackOffsetY = isBottom ? stackIndex.value * 10 : stackIndex.value * -10;
+    const finalTranslateY = baseTranslateY + slot.translationY.value + stackOffsetY;
 
-    // Stack scale: each toast behind scales down by 0.05
-    const stackScale = 1 - stackIndex.value * 0.05;
-
-    const finalTranslateY = baseTranslateY + translationY.value + stackOffsetY;
-
-    const progressOpacity = interpolate(progress.value, [0, 1], [0, 1]);
-    // For top: dragging up (negative) fades out. For bottom: dragging down (positive) fades out
-    const dismissDirection = isBottom ? translationY.value : -translationY.value;
+    const progressOpacity = interpolate(slot.progress.value, [0, 1], [0, 1]);
+    const dismissDirection = isBottom ? slot.translationY.value : -slot.translationY.value;
     const dragOpacity = dismissDirection > 0 ? interpolate(dismissDirection, [0, 130], [1, 0], "clamp") : 1;
     const opacity = progressOpacity * dragOpacity;
 
-    const dragScale = interpolate(Math.abs(translationY.value), [0, 50], [1, 0.98], "clamp");
+    const dragScale = interpolate(Math.abs(slot.translationY.value), [0, 50], [1, 0.98], "clamp");
     const scale = stackScale * dragScale;
 
     return {
       transform: [{ translateY: finalTranslateY }, { scale }],
       opacity,
-      zIndex: zIndex.value,
+      zIndex: 1000 - Math.round(slot.stackIndex.value),
     };
   });
 
-  const accentColor = theme.colors[toast.type].accent;
-  const backgroundColor = theme.colors[toast.type].background;
-  const verticalAnchor = isBottom ? { bottom: 0 } : { top: 0 };
-
-  // Per-toast overrides from options
   const { options } = toast;
-  const customIcon = options?.icon;
-  const configIcon = theme.icons[toast.type];
-
-  // Resolve dismissible and showCloseButton (per-toast overrides config)
-  const isDismissible = options?.dismissible ?? theme.dismissible;
+  const colors = theme.colors[toast.type];
   const shouldShowCloseButton = toast.type !== "loading" && (options?.showCloseButton ?? theme.showCloseButton);
 
-  // Enable/disable gesture based on dismissible setting
-  const gesture = isDismissible ? panGesture : disabledGesture;
-
-  const animStyle = [
-    styles.toast,
-    verticalAnchor,
-    { backgroundColor },
-    theme.toastStyle,
-    options?.style,
-    animatedStyle,
-  ];
-
   return (
-    <GestureDetector gesture={gesture}>
-      <Animated.View style={animStyle}>
-        <ToastContent
-          type={toast.type}
-          title={toast.title}
-          description={toast.description}
-          accentColor={accentColor}
-          customIcon={customIcon}
-          configIcon={configIcon}
-          showCloseButton={shouldShowCloseButton}
-          onDismiss={dismissToast}
-          titleStyle={theme.titleStyle}
-          descriptionStyle={theme.descriptionStyle}
-          optionsTitleStyle={options?.titleStyle}
-          optionsDescriptionStyle={options?.descriptionStyle}
-        />
-      </Animated.View>
-    </GestureDetector>
+    <Animated.View
+      style={[
+        styles.toast,
+        isBottom ? styles.toastBottom : styles.toastTop,
+        { backgroundColor: colors.background },
+        theme.toastStyle,
+        options?.style,
+        animatedStyle,
+      ]}
+    >
+      <View style={styles.iconContainer}>
+        {showIcon &&
+          (shouldAnimateIcon ? (
+            <AnimatedIcon
+              key={toast.type}
+              type={toast.type}
+              color={colors.accent}
+              custom={options?.icon}
+              config={theme.icons[toast.type]}
+            />
+          ) : (
+            resolveIcon(toast.type, colors.accent, options?.icon, theme.icons[toast.type])
+          ))}
+      </View>
+      <View style={styles.textContainer}>
+        <Text
+          maxFontSizeMultiplier={1.35}
+          allowFontScaling={false}
+          style={[styles.title, { color: colors.accent }, theme.titleStyle, options?.titleStyle]}
+        >
+          {toast.title}
+        </Text>
+        {toast.description && (
+          <Text
+            allowFontScaling={false}
+            maxFontSizeMultiplier={1.35}
+            style={[styles.description, theme.descriptionStyle, options?.descriptionStyle]}
+          >
+            {toast.description}
+          </Text>
+        )}
+      </View>
+      {shouldShowCloseButton && (
+        <Pressable style={styles.closeButton} onPress={dismissToast} hitSlop={12}>
+          <CloseIcon width={20} height={20} />
+        </Pressable>
+      )}
+    </Animated.View>
   );
 };
 
-// Custom comparison to prevent re-renders when toast object reference changes but content is same
 const MemoizedToastItem = memo(ToastItem, (prev, next) => {
   return (
     prev.toast.id === next.toast.id &&
@@ -404,9 +501,14 @@ const MemoizedToastItem = memo(ToastItem, (prev, next) => {
     prev.toast.isExiting === next.toast.isExiting &&
     prev.index === next.index &&
     prev.position === next.position &&
-    prev.theme === next.theme
+    prev.theme === next.theme &&
+    prev.isTopToast === next.isTopToast
   );
 });
+
+// ============================================================================
+// Styles
+// ============================================================================
 
 const styles = StyleSheet.create({
   container: {
@@ -415,41 +517,11 @@ const styles = StyleSheet.create({
     right: 16,
     zIndex: 1000,
   },
-  closeButton: {
-    padding: 4,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  icon: {
-    width: 48,
-    height: 48,
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: 8,
-  },
-  content: {
-    alignItems: "center",
+  toast: {
     flexDirection: "row",
+    alignItems: "center",
     gap: 12,
     minHeight: 36,
-  },
-  description: {
-    color: "#6B7280",
-    fontSize: 12,
-    fontWeight: "500",
-    lineHeight: 16,
-  },
-  textContainer: {
-    flex: 1,
-    gap: 1,
-    justifyContent: "center",
-  },
-  title: {
-    fontSize: 14,
-    fontWeight: "700",
-    lineHeight: 20,
-  },
-  toast: {
     borderRadius: 20,
     borderCurve: "continuous",
     position: "absolute",
@@ -462,5 +534,39 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 24,
     elevation: 8,
+  },
+  toastTop: {
+    top: 0,
+  },
+  toastBottom: {
+    bottom: 0,
+  },
+  iconContainer: {
+    width: 48,
+    height: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 8,
+  },
+  textContainer: {
+    flex: 1,
+    gap: 1,
+    justifyContent: "center",
+  },
+  title: {
+    fontSize: 14,
+    fontWeight: "700",
+    lineHeight: 20,
+  },
+  description: {
+    color: "#6B7280",
+    fontSize: 12,
+    fontWeight: "500",
+    lineHeight: 16,
+  },
+  closeButton: {
+    padding: 4,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });
