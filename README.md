@@ -1,8 +1,8 @@
 # React Native Bread 🍞
 
-https://github.com/user-attachments/assets/39238eef-0e5a-4d27-afa7-17cb51ed4aec
-
 An extremely lightweight, opinionated toast component for React Native.
+
+![demo](https://github.com/user-attachments/assets/860d9d19-66f4-4fc6-a992-2d161e2e8bad)
 
 ## Features
 
