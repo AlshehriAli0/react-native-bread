@@ -29,15 +29,31 @@ An extremely lightweight, opinionated toast component for React Native.
 bun add react-native-bread
 ```
 
-#### Requirements
+#### Peer Dependencies
 
-To use this package, **you also need to install its peer dependencies**. Check out their documentation for more information:
+This package requires the following peer dependencies:
 
-- [React Native Reanimated](https://docs.swmansion.com/react-native-reanimated/docs/fundamentals/getting-started)
-- [React Native Gesture Handler](https://docs.swmansion.com/react-native-gesture-handler/docs/)
-- [React Native Safe Area Context](https://docs.expo.dev/versions/latest/sdk/safe-area-context/)
-- [React Native SVG](https://github.com/software-mansion/react-native-svg)
-- [React Native Worklets](https://github.com/margelo/react-native-worklets-core)
+| Package | Version |
+|---------|---------|
+| [react-native-reanimated](https://docs.swmansion.com/react-native-reanimated/docs/fundamentals/getting-started) | >= 4.2.0 |
+| [react-native-gesture-handler](https://docs.swmansion.com/react-native-gesture-handler/docs/) | >= 2.25.0 |
+| [react-native-safe-area-context](https://docs.expo.dev/versions/latest/sdk/safe-area-context/) | >= 5.0.0 |
+| [react-native-svg](https://github.com/software-mansion/react-native-svg) | >= 15.8.0 |
+| [react-native-worklets](https://github.com/margelo/react-native-worklets-core) | >= 0.7.0 |
+
+If you don't have these installed, you can install all peer dependencies at once:
+
+```sh
+bun add react-native-reanimated react-native-gesture-handler react-native-safe-area-context react-native-svg react-native-worklets
+```
+
+Or with npm:
+
+```sh
+npm install react-native-reanimated react-native-gesture-handler react-native-safe-area-context react-native-svg react-native-worklets
+```
+
+> **Note**: `react-native-reanimated` 4.2.x requires `react-native-worklets` 0.7.x. Using older versions of worklets with reanimated 4.2+ will cause compatibility issues.
 
 
 ## Usage
