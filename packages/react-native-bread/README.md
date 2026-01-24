@@ -11,7 +11,7 @@ An extremely lightweight, opinionated toast component for React Native.
 - Zero setup - add one component, start toasting. No hooks, no providers
 - Built for mobile with smooth 60fps animations powered by Reanimated
 - Natural swipe gestures that feel native to the platform
-- Multiple toast types: `success`, `error`, `info`, and `promise`
+- Multiple toast types: `success`, `error`, `info`, `promise`, and `custom`
 - Promise handling with automatic loading → success/error states
 - Complex animations and gestures but with high performance
 - Toast stacking with configurable limits
@@ -35,11 +35,11 @@ This package requires the following peer dependencies:
 
 | Package | Version |
 |---------|---------|
-| [react-native-reanimated](https://docs.swmansion.com/react-native-reanimated/docs/fundamentals/getting-started) | >= 4.2.0 |
+| [react-native-reanimated](https://docs.swmansion.com/react-native-reanimated/docs/fundamentals/getting-started) | >= 4.1.0 |
 | [react-native-gesture-handler](https://docs.swmansion.com/react-native-gesture-handler/docs/) | >= 2.25.0 |
 | [react-native-safe-area-context](https://docs.expo.dev/versions/latest/sdk/safe-area-context/) | >= 5.0.0 |
 | [react-native-svg](https://github.com/software-mansion/react-native-svg) | >= 15.8.0 |
-| [react-native-worklets](https://github.com/margelo/react-native-worklets-core) | >= 0.7.0 |
+| [react-native-worklets](https://github.com/margelo/react-native-worklets-core) | >= 0.5.0 |
 
 If you don't have these installed, you can install all peer dependencies at once:
 
@@ -53,7 +53,7 @@ Or with npm:
 npm install react-native-reanimated react-native-gesture-handler react-native-safe-area-context react-native-svg react-native-worklets
 ```
 
-> **Note**: `react-native-reanimated` 4.2.x requires `react-native-worklets` 0.7.x. Using older versions of worklets with reanimated 4.2+ will cause compatibility issues.
+> **Note**: Make sure your `react-native-reanimated` and `react-native-worklets` versions are compatible. Reanimated 4.1.x works with worklets 0.5.x-0.7.x, while Reanimated 4.2.x requires worklets 0.7.x only.
 
 
 ## Usage
@@ -115,6 +115,15 @@ toast.promise(fetchData(), {
   success: { title: 'Done!', description: 'Data loaded' },
   error: (err) => ({ title: 'Failed', description: err.message }),
 });
+
+// Custom toast - fully custom content with animations
+toast.custom(({ dismiss }) => (
+  <View style={{ padding: 16, flexDirection: 'row', alignItems: 'center' }}>
+    <Image source={{ uri: 'avatar.png' }} style={{ width: 40, height: 40 }} />
+    <Text>New message from John</Text>
+    <Button title="Reply" onPress={dismiss} />
+  </View>
+));
 ```
 
 ## Customization
@@ -131,6 +140,36 @@ toast.success('Saved!', {
   style: { backgroundColor: '#fff' },
   dismissible: true,
   showCloseButton: true,
+});
+```
+
+### Custom Toasts
+
+Create fully custom toasts where you control all the content. Your component fills the entire toast container and receives all entry/exit/stack animations automatically:
+
+```tsx
+// Using a render function (recommended - gives access to dismiss)
+toast.custom(({ dismiss, id, type, isExiting }) => (
+  <View style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+    <Image source={{ uri: 'avatar.png' }} style={{ width: 44, height: 44, borderRadius: 22 }} />
+    <View style={{ flex: 1 }}>
+      <Text style={{ fontWeight: '600' }}>New message</Text>
+      <Text style={{ color: '#666' }}>Hey, check this out!</Text>
+    </View>
+    <Pressable onPress={dismiss}>
+      <Text style={{ color: '#3b82f6' }}>Reply</Text>
+    </Pressable>
+  </View>
+));
+
+// Or pass a React component directly
+toast.custom(<MyNotificationCard />);
+
+// With options
+toast.custom(<MyToast />, {
+  duration: 5000,
+  dismissible: false,
+  style: { backgroundColor: '#fef2f2' }
 });
 ```
 
@@ -174,6 +213,7 @@ Available options include:
 | `toast.error(title, description?)` | Show error toast |
 | `toast.info(title, description?)` | Show info toast |
 | `toast.promise(promise, messages)` | Show loading → success/error toast |
+| `toast.custom(content, options?)` | Show fully custom toast with your own content |
 | `toast.dismiss(id)` | Dismiss a specific toast |
 | `toast.dismissAll()` | Dismiss all toasts |
 

@@ -4,7 +4,6 @@ export type Listener = (state: ToastState) => void;
 
 const EXIT_DURATION = 350;
 
-/** Default theme values */
 const DEFAULT_THEME: ToastTheme = {
   position: "top",
   offset: 0,
@@ -26,7 +25,6 @@ const DEFAULT_THEME: ToastTheme = {
   defaultDuration: 4000,
 };
 
-/** Deep merge user config with defaults */
 function mergeConfig(config: ToastConfig | undefined): ToastTheme {
   if (!config) return DEFAULT_THEME;
 
@@ -120,15 +118,12 @@ class ToastStore {
     };
 
     const { visibleToasts } = this.state;
-
-    // Get only non-exiting toasts for count
     const activeToasts = visibleToasts.filter(t => !t.isExiting);
 
     if (activeToasts.length >= maxToasts) {
       const toastsToRemove = activeToasts.slice(maxToasts - 1);
 
       for (const toast of toastsToRemove) {
-        // Clear auto-dismiss timeout
         const timeout = this.timeouts.get(toast.id);
         if (timeout) {
           clearTimeout(timeout);
@@ -139,17 +134,14 @@ class ToastStore {
       const removeIds = new Set(toastsToRemove.map(t => t.id));
 
       if (this.theme.stacking) {
-        // When stacking is ON: remove old toasts from state immediately (no animation for stack overflow)
         this.setState({
           visibleToasts: visibleToasts.filter(t => !removeIds.has(t.id)),
         });
       } else {
-        // When stacking is OFF: animate out the old toast, wait, then show new one
         this.setState({
           visibleToasts: visibleToasts.map(t => (removeIds.has(t.id) ? { ...t, isExiting: true } : t)),
         });
 
-        // Delay showing the new toast until the old one has animated out
         setTimeout(() => {
           for (const toast of toastsToRemove) {
             this.removeToast(toast.id);
@@ -161,7 +153,6 @@ class ToastStore {
       }
     }
 
-    // Add new toast immediately (stacking ON or no existing toasts)
     this.addToast(newToast, actualDuration);
 
     return id;
@@ -172,10 +163,7 @@ class ToastStore {
       visibleToasts: [toast, ...this.state.visibleToasts.filter(t => !t.isExiting)],
     });
 
-    // Schedule auto-dismiss with duration multiplier based on position
     this.scheduleTimeout(toast.id, duration, 0);
-
-    // Reschedule timeouts for other toasts based on their new positions
     this.rescheduleAllTimeouts();
   }
 
@@ -185,7 +173,6 @@ class ToastStore {
       clearTimeout(existingTimeout);
     }
 
-    // Duration multiplier: index 0 = 1x, index 1 = 2x, index 2 = 3x
     const duration = baseDuration * (index + 1);
 
     const timeout = setTimeout(() => {
@@ -199,7 +186,6 @@ class ToastStore {
     const { visibleToasts } = this.state;
 
     visibleToasts.forEach((toast, index) => {
-      // Skip if already exiting or index 0 (just scheduled)
       if (toast.isExiting || index === 0) return;
 
       this.scheduleTimeout(toast.id, toast.duration, index);
@@ -211,19 +197,16 @@ class ToastStore {
     const toast = visibleToasts.find(t => t.id === id);
     if (!toast || toast.isExiting) return;
 
-    // Clear the auto-dismiss timeout
     const timeout = this.timeouts.get(id);
     if (timeout) {
       clearTimeout(timeout);
       this.timeouts.delete(id);
     }
 
-    // Mark as exiting (triggers exit animation in component)
     this.setState({
       visibleToasts: visibleToasts.map(t => (t.id === id ? { ...t, isExiting: true } : t)),
     });
 
-    // After exit animation, actually remove the toast
     setTimeout(() => {
       this.removeToast(id);
     }, EXIT_DURATION);
@@ -240,7 +223,6 @@ class ToastStore {
       visibleToasts: this.state.visibleToasts.filter(t => t.id !== id),
     });
 
-    // Reschedule remaining toasts with updated positions
     this.rescheduleAllTimeouts();
   }
 

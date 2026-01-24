@@ -1,5 +1,7 @@
+import type { ReactNode } from "react";
 import { toastStore } from "./toast-store";
 import type {
+  CustomContentRenderFn,
   ErrorMessageInput,
   MessageInput,
   PromiseMessages,
@@ -8,14 +10,12 @@ import type {
   ToastType,
 } from "./types";
 
-/** Second parameter can be a string (description) or options object */
 type DescriptionOrOptions = string | ToastOptions;
 
 const _toast = (title: string, description?: string, type?: ToastType, duration?: number) => {
   toastStore.show(title, description, type, duration);
 };
 
-/** Helper to parse the second argument which can be string or options */
 const parseDescriptionOrOptions = (
   arg?: DescriptionOrOptions
 ): { description?: string; duration?: number; options?: ToastOptions } => {
@@ -44,7 +44,6 @@ const parseErrorMessage = (
 const promiseToast = async <T>(promise: Promise<T>, messages: PromiseMessages): Promise<PromiseResult<T>> => {
   const loadingCfg = parseMessage(messages.loading);
 
-  // Very long duration so it stays visible until we resolve/reject
   const toastId = toastStore.show(
     loadingCfg.title,
     loadingCfg.description,
@@ -78,7 +77,35 @@ const promiseToast = async <T>(promise: Promise<T>, messages: PromiseMessages): 
   }
 };
 
+interface CustomToastOptions extends Omit<ToastOptions, "customContent" | "icon" | "titleStyle" | "descriptionStyle"> {
+  type?: ToastType;
+}
+
 type BaseToastFn = ((title: string, description?: string, type?: ToastType, duration?: number) => void) & {
+  /**
+   * Show a fully custom toast where you control all the content.
+   * The content you provide fills the entire toast container and receives entry/exit animations.
+   * @param content - ReactNode or render function that receives { id, dismiss, type, isExiting }
+   * @param options - Optional configuration for duration, dismissible, style, etc.
+   * @returns The toast ID
+   * @example
+   * ```ts
+   * // Simple custom content
+   * toast.custom(<MyCustomToast />);
+   *
+   * // With render function for dismiss access
+   * toast.custom(({ dismiss }) => (
+   *   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+   *     <Text>Custom toast!</Text>
+   *     <Button title="Close" onPress={dismiss} />
+   *   </View>
+   * ));
+   *
+   * // With options
+   * toast.custom(<MyToast />, { duration: 5000, dismissible: false });
+   * ```
+   */
+  custom: (content: ReactNode | CustomContentRenderFn, options?: CustomToastOptions) => string;
   /**
    * Show a success toast with a green checkmark icon.
    * @param title - The toast title
@@ -158,8 +185,15 @@ type BaseToastFn = ((title: string, description?: string, type?: ToastType, dura
   dismissAll: () => void;
 };
 
-// Build the toast API
 const toastFn = _toast as unknown as BaseToastFn;
+
+toastFn.custom = (content: ReactNode | CustomContentRenderFn, options?: CustomToastOptions) => {
+  const type = options?.type ?? "info";
+  return toastStore.show("", undefined, type, options?.duration, {
+    ...options,
+    customContent: content,
+  });
+};
 
 toastFn.success = (title: string, descriptionOrOptions?: DescriptionOrOptions, duration?: number) => {
   const { description, duration: optDuration, options } = parseDescriptionOrOptions(descriptionOrOptions);

@@ -20,6 +20,21 @@ export interface IconProps {
   size: number;
 }
 
+/** Props passed to custom content render functions */
+export interface CustomContentProps {
+  /** Toast ID */
+  id: string;
+  /** Dismiss this toast */
+  dismiss: () => void;
+  /** Toast type */
+  type: ToastType;
+  /** Whether the toast is currently exiting */
+  isExiting: boolean;
+}
+
+/** Custom content render function for fully custom toasts */
+export type CustomContentRenderFn = (props: CustomContentProps) => ReactNode;
+
 /** Custom icon render function */
 export type IconRenderFn = (props: IconProps) => ReactNode;
 
@@ -70,6 +85,12 @@ export interface ToastOptions {
   dismissible?: boolean;
   /** Whether to show the close button on this toast (overrides config) */
   showCloseButton?: boolean;
+  /**
+   * Custom content that fully replaces the default toast layout.
+   * When provided, icon, title, description, and close button are not rendered.
+   * Receives props: { id, dismiss, type, isExiting }
+   */
+  customContent?: ReactNode | CustomContentRenderFn;
 }
 
 /** Configuration options for customizing toast behavior and appearance. All properties are optional. */
@@ -98,7 +119,6 @@ export interface ToastState {
   visibleToasts: Toast[];
 }
 
-// --- Promise helper types ---
 export type MessageInput =
   | string
   | {

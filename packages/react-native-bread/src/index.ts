@@ -10,6 +10,8 @@ export { BreadLoaf } from "./toast-provider";
 export { toastStore } from "./toast-store";
 // Types
 export type {
+  CustomContentProps,
+  CustomContentRenderFn,
   ErrorMessageInput,
   IconProps,
   IconRenderFn,

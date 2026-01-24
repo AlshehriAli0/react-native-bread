@@ -25,7 +25,7 @@ import { CloseIcon } from "./icons";
 import { type AnimSlot, animationPool, getSlotIndex, releaseSlot, slotTrackers } from "./pool";
 import { AnimatedIcon, resolveIcon } from "./toast-icons";
 import { toastStore } from "./toast-store";
-import type { ToastItemProps, TopToastRef } from "./types";
+import type { CustomContentRenderFn, ToastItemProps, TopToastRef } from "./types";
 import { useToastState } from "./use-toast-state";
 
 export const ToastContainer = () => {
@@ -225,6 +225,33 @@ const ToastItem = ({ toast, index, theme, position, isTopToast, registerTopToast
 
   const { options } = toast;
   const colors = theme.colors[toast.type];
+
+  if (options?.customContent !== undefined) {
+    const content = options.customContent;
+    return (
+      <Animated.View
+        style={[
+          styles.toast,
+          styles.customContentToast,
+          isBottom ? styles.toastBottom : styles.toastTop,
+          { backgroundColor: colors.background },
+          theme.toastStyle,
+          options.style,
+          animatedStyle,
+        ]}
+      >
+        {typeof content === "function"
+          ? (content as CustomContentRenderFn)({
+              id: toast.id,
+              dismiss: dismissToast,
+              type: toast.type,
+              isExiting: !!toast.isExiting,
+            })
+          : content}
+      </Animated.View>
+    );
+  }
+
   const shouldShowCloseButton = toast.type !== "loading" && (options?.showCloseButton ?? theme.showCloseButton);
 
   return (
@@ -329,6 +356,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 24,
     elevation: 8,
+  },
+  customContentToast: {
+    padding: 0,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    overflow: "hidden",
   },
   rtl: {
     flexDirection: "row-reverse",

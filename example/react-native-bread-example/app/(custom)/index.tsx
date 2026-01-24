@@ -1,6 +1,57 @@
 import { useRouter } from "expo-router";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { toast } from "react-native-bread";
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { type CustomContentProps, toast } from "react-native-bread";
+
+const CustomToastContent = ({ dismiss }: CustomContentProps) => (
+  <View style={customStyles.container}>
+    <Image source={{ uri: "https://avatars.githubusercontent.com/u/62209850" }} style={customStyles.avatar} />
+    <View style={customStyles.textContainer}>
+      <Text style={customStyles.name}>Ali</Text>
+      <Text style={customStyles.message}>Hey! Check out this custom toast</Text>
+    </View>
+    <Pressable style={customStyles.button} onPress={dismiss}>
+      <Text style={customStyles.buttonText}>Reply</Text>
+    </Pressable>
+  </View>
+);
+
+const customStyles = StyleSheet.create({
+  container: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    gap: 12,
+  },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+  },
+  textContainer: {
+    flex: 1,
+    gap: 2,
+  },
+  name: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#111827",
+  },
+  message: {
+    fontSize: 13,
+    color: "#6b7280",
+  },
+  button: {
+    backgroundColor: "#3b82f6",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  buttonText: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+});
 
 export default function CustomScreen() {
   const router = useRouter();
@@ -59,6 +110,66 @@ export default function CustomScreen() {
             }
           >
             <Text style={styles.buttonText}>No Close Button</Text>
+          </Pressable>
+
+          <Pressable
+            style={[styles.button, { backgroundColor: "#8b5cf6" }]}
+            onPress={() =>
+              toast.custom(CustomToastContent, {
+                duration: 5000,
+              })
+            }
+          >
+            <Text style={styles.buttonText}>Custom Content</Text>
+          </Pressable>
+
+          <Pressable
+            style={[styles.button, { backgroundColor: "#ec4899" }]}
+            onPress={() =>
+              toast.custom(
+                ({ dismiss }) => (
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      padding: 14,
+                      gap: 14,
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: 24,
+                        backgroundColor: "#fce7f3",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Text style={{ fontSize: 24 }}>🎉</Text>
+                    </View>
+                    <View style={{ flex: 1, gap: 2 }}>
+                      <Text style={{ fontSize: 15, fontWeight: "700", color: "#111" }}>Achievement Unlocked!</Text>
+                      <Text style={{ fontSize: 13, color: "#6b7280" }}>You created a custom toast</Text>
+                    </View>
+                    <Pressable
+                      onPress={dismiss}
+                      style={{
+                        backgroundColor: "#ec4899",
+                        paddingHorizontal: 14,
+                        paddingVertical: 8,
+                        borderRadius: 16,
+                      }}
+                    >
+                      <Text style={{ color: "#fff", fontSize: 13, fontWeight: "600" }}>Nice!</Text>
+                    </Pressable>
+                  </View>
+                ),
+                { style: { backgroundColor: "#fff" } }
+              )
+            }
+          >
+            <Text style={styles.buttonText}>Inline Custom</Text>
           </Pressable>
         </View>
       </View>
