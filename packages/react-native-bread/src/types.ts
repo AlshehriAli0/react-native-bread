@@ -121,3 +121,21 @@ export interface PromiseResult<T> {
   error?: Error;
   success: boolean;
 }
+
+export interface TopToastRef {
+  slot: {
+    progress: { value: number };
+    translationY: { value: number };
+    stackIndex: { value: number };
+  };
+  dismiss: () => void;
+}
+
+export interface ToastItemProps {
+  toast: Toast;
+  index: number;
+  theme: ToastTheme;
+  position: ToastPosition;
+  isTopToast: boolean;
+  registerTopToast: (values: TopToastRef | null) => void;
+}

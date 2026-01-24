@@ -1,256 +1,46 @@
-import { memo, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import Animated, {
-  Easing,
-  interpolate,
-  makeMutable,
-  type SharedValue,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from "react-native-reanimated";
+import Animated, { interpolate, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
-import { CloseIcon, GreenCheck, InfoIcon, RedX } from "./icons";
-import { type Toast as ToastData, type ToastState, type ToastType, toastStore } from "./toast-store";
-import type { IconRenderFn, ToastPosition, ToastTheme } from "./types";
-
-// ============================================================================
-// Constants
-// ============================================================================
-
-const ICON_SIZE = 28;
-const POOL_SIZE = 5;
-
-// Animation timing
-const ENTRY_DURATION = 400;
-const EXIT_DURATION = 350;
-const STACK_TRANSITION_DURATION = 300;
-const SPRING_BACK_DURATION = 650;
-const ICON_ANIMATION_DURATION = 350;
-
-// Animation values
-const ENTRY_OFFSET = 80;
-const EXIT_OFFSET = 100;
-const SWIPE_EXIT_OFFSET = 200;
-const MAX_DRAG_CLAMP = 180;
-const MAX_DRAG_RESISTANCE = 60;
-const DISMISS_THRESHOLD = 40;
-const DISMISS_VELOCITY_THRESHOLD = 300;
-
-// Stack animation
-const STACK_OFFSET_PER_ITEM = 10;
-const STACK_SCALE_PER_ITEM = 0.05;
-
-// Shared easing curve
-const EASING = Easing.bezier(0.25, 0.1, 0.25, 1.0);
-
-// ============================================================================
-// Animation Pool - Module level, created once outside React
-// ============================================================================
-
-// Animation values only - passed to worklets
-interface AnimSlot {
-  progress: SharedValue<number>;
-  translationY: SharedValue<number>;
-  stackIndex: SharedValue<number>;
-}
-
-// JS-only tracking state - never passed to worklets
-interface SlotTracker {
-  wasExiting: boolean;
-  prevIndex: number;
-  initialized: boolean;
-}
-
-// Pre-create all animation state outside React - no per-toast hook overhead
-const animationPool: AnimSlot[] = Array.from({ length: POOL_SIZE }, () => ({
-  progress: makeMutable(0),
-  translationY: makeMutable(0),
-  stackIndex: makeMutable(0),
-}));
-
-// JS-only tracking state - kept separate to avoid worklet serialization issues
-const slotTrackers: SlotTracker[] = Array.from({ length: POOL_SIZE }, () => ({
-  wasExiting: false,
-  prevIndex: 0,
-  initialized: false,
-}));
-
-// Track slot assignments
-const slotAssignments = new Map<string, number>();
-const usedSlots = new Set<number>();
-
-const getSlotIndex = (toastId: string): number => {
-  if (slotAssignments.has(toastId)) {
-    return slotAssignments.get(toastId) ?? 0;
-  }
-  // Find free slot
-  for (let i = 0; i < POOL_SIZE; i++) {
-    if (!usedSlots.has(i)) {
-      slotAssignments.set(toastId, i);
-      usedSlots.add(i);
-      // Reset tracker state for new assignment
-      slotTrackers[i].initialized = false;
-      slotTrackers[i].wasExiting = false;
-      slotTrackers[i].prevIndex = 0;
-      return i;
-    }
-  }
-  // Fallback to first slot if all used
-  return 0;
-};
-
-const releaseSlot = (toastId: string) => {
-  const idx = slotAssignments.get(toastId);
-  if (idx !== undefined) {
-    usedSlots.delete(idx);
-    slotAssignments.delete(toastId);
-    // Reset the tracker
-    slotTrackers[idx].initialized = false;
-    slotTrackers[idx].wasExiting = false;
-    slotTrackers[idx].prevIndex = 0;
-  }
-};
-
-// ============================================================================
-// Types
-// ============================================================================
-
-interface TopToastRef {
-  slot: AnimSlot;
-  dismiss: () => void;
-}
-
-interface ToastItemProps {
-  toast: ToastData;
-  index: number;
-  theme: ToastTheme;
-  position: ToastPosition;
-  isTopToast: boolean;
-  registerTopToast: (values: TopToastRef | null) => void;
-}
-
-// Icon resolution - handles custom, config, and default icons
-const resolveIcon = (type: ToastType, color: string, custom?: ReactNode | IconRenderFn, config?: IconRenderFn) => {
-  if (custom) return typeof custom === "function" ? custom({ color, size: ICON_SIZE }) : custom;
-  if (config) return config({ color, size: ICON_SIZE });
-  switch (type) {
-    case "success":
-      return <GreenCheck width={36} height={36} fill={color} />;
-    case "error":
-      return <RedX width={ICON_SIZE} height={ICON_SIZE} fill={color} />;
-    case "loading":
-      return <ActivityIndicator size={ICON_SIZE} color={color} />;
-    case "info":
-      return <InfoIcon width={ICON_SIZE} height={ICON_SIZE} fill={color} />;
-    default:
-      return <GreenCheck width={36} height={36} fill={color} />;
-  }
-};
-
-// Only used for promise resolution (loading -> success/error)
-const AnimatedIcon = memo(
-  ({
-    type,
-    color,
-    custom,
-    config,
-  }: {
-    type: ToastType;
-    color: string;
-    custom?: ReactNode | IconRenderFn;
-    config?: IconRenderFn;
-  }) => {
-    const progress = useSharedValue(0);
-
-    useEffect(() => {
-      progress.value = withTiming(1, {
-        duration: ICON_ANIMATION_DURATION,
-        easing: Easing.out(Easing.back(1.5)),
-      });
-    }, [progress]);
-
-    const style = useAnimatedStyle(() => ({
-      opacity: progress.value,
-      transform: [{ scale: 0.7 + progress.value * 0.3 }],
-    }));
-
-    return <Animated.View style={style}>{resolveIcon(type, color, custom, config)}</Animated.View>;
-  }
-);
-
-// ============================================================================
-// Toast Container (singleton)
-// ============================================================================
+import {
+  DISMISS_THRESHOLD,
+  DISMISS_VELOCITY_THRESHOLD,
+  EASING,
+  ENTRY_DURATION,
+  ENTRY_OFFSET,
+  EXIT_DURATION,
+  EXIT_OFFSET,
+  ICON_ANIMATION_DURATION,
+  MAX_DRAG_CLAMP,
+  MAX_DRAG_RESISTANCE,
+  SPRING_BACK_DURATION,
+  STACK_OFFSET_PER_ITEM,
+  STACK_SCALE_PER_ITEM,
+  STACK_TRANSITION_DURATION,
+  SWIPE_EXIT_OFFSET,
+} from "./constants";
+import { CloseIcon } from "./icons";
+import { type AnimSlot, animationPool, getSlotIndex, releaseSlot, slotTrackers } from "./pool";
+import { AnimatedIcon, resolveIcon } from "./toast-icons";
+import { toastStore } from "./toast-store";
+import type { ToastItemProps, TopToastRef } from "./types";
+import { useToastState } from "./use-toast-state";
 
 export const ToastContainer = () => {
-  const [visibleToasts, setVisibleToasts] = useState<ToastData[]>([]);
-  const [theme, setTheme] = useState<ToastTheme>(() => toastStore.getTheme());
   const { top, bottom } = useSafeAreaInsets();
+  const { visibleToasts, theme, toastsWithIndex, isBottom, topToastRef, isBottomRef, isDismissibleRef } =
+    useToastState();
 
-  // Mutable refs accessible from worklets - avoids gesture recreation
-  const topToastRef = useRef(makeMutable<TopToastRef | null>(null));
-  const isBottomRef = useRef(makeMutable(theme.position === "bottom"));
-  const isDismissibleRef = useRef(makeMutable(true));
   const shouldDismiss = useSharedValue(false);
 
-  useEffect(() => {
-    setVisibleToasts(toastStore.getState().visibleToasts);
-
-    // RAF batching to prevent iOS FPS drops from rapid state updates
-    let pendingToasts: ToastData[] | null = null;
-    let rafId: number | null = null;
-
-    return toastStore.subscribe((state: ToastState) => {
-      pendingToasts = state.visibleToasts;
-      if (rafId === null) {
-        rafId = requestAnimationFrame(() => {
-          if (pendingToasts) {
-            setVisibleToasts(pendingToasts);
-            pendingToasts = null;
-          }
-          rafId = null;
-          const newTheme = toastStore.getTheme();
-          setTheme(prev => (prev === newTheme ? prev : newTheme));
-        });
-      }
-    });
-  }, []);
-
-  // Pre-compute visual indices once
-  const toastsWithIndex = useMemo(() => {
-    const indices = new Map<string, number>();
-    let visualIndex = 0;
-    for (const t of visibleToasts) {
-      indices.set(t.id, t.isExiting ? -1 : visualIndex);
-      if (!t.isExiting) visualIndex++;
-    }
-    // Reverse for rendering (newest on top in z-order)
-    return [...visibleToasts].reverse().map(t => ({
-      toast: t,
-      index: indices.get(t.id) ?? 0,
-    }));
-  }, [visibleToasts]);
-
-  const isBottom = theme.position === "bottom";
-  const topToast = visibleToasts.find(t => !t.isExiting);
-  const isTopDismissible = topToast?.options?.dismissible ?? theme.dismissible;
-
-  // Update mutable refs when values change (in effect to avoid render-time writes)
-  useEffect(() => {
-    isBottomRef.current.value = isBottom;
-    isDismissibleRef.current.value = isTopDismissible;
-  }, [isBottom, isTopDismissible]);
-
-  // Single gesture handler - reads from refs so it never needs recreation
   const panGesture = useMemo(
     () =>
       Gesture.Pan()
         .onStart(() => {
           "worklet";
-          shouldDismiss.value = false;
+          shouldDismiss.set(false);
         })
         .onUpdate(event => {
           "worklet";
@@ -265,16 +55,14 @@ export const ToastContainer = () => {
           const resistDrag = bottom ? -rawY : rawY;
 
           if (dismissDrag > 0) {
-            // Dragging toward dismiss direction
             const clampedY = bottom ? Math.min(rawY, MAX_DRAG_CLAMP) : Math.max(rawY, -MAX_DRAG_CLAMP);
             slot.translationY.value = clampedY;
 
             const shouldTriggerDismiss =
               dismissDrag > DISMISS_THRESHOLD ||
               (bottom ? event.velocityY > DISMISS_VELOCITY_THRESHOLD : event.velocityY < -DISMISS_VELOCITY_THRESHOLD);
-            shouldDismiss.value = shouldTriggerDismiss;
+            shouldDismiss.set(shouldTriggerDismiss);
           } else {
-            // Dragging away from edge - apply exponential resistance
             const exponentialDrag = MAX_DRAG_RESISTANCE * (1 - Math.exp(-resistDrag / 250));
             slot.translationY.value = bottom
               ? -Math.min(exponentialDrag, MAX_DRAG_RESISTANCE)
@@ -302,12 +90,15 @@ export const ToastContainer = () => {
             slot.translationY.value = withTiming(0, { duration: SPRING_BACK_DURATION, easing: EASING });
           }
         }),
-    [shouldDismiss]
+    [shouldDismiss, isDismissibleRef, topToastRef, isBottomRef]
   );
 
-  const registerTopToast = useCallback((values: TopToastRef | null) => {
-    topToastRef.current.value = values;
-  }, []);
+  const registerTopToast = useCallback(
+    (values: TopToastRef | null) => {
+      topToastRef.current.value = values;
+    },
+    [topToastRef]
+  );
 
   if (visibleToasts.length === 0) return null;
 
@@ -333,17 +124,8 @@ export const ToastContainer = () => {
   );
 };
 
-// ============================================================================
-// Toast Item - Animations triggered directly via shared value assignments
-// ============================================================================
-
 const ToastItem = ({ toast, index, theme, position, isTopToast, registerTopToast }: ToastItemProps) => {
-  // Get slot index from pool - store in ref so it persists
-  const slotIndexRef = useRef<number | null>(null);
-  if (slotIndexRef.current === null) {
-    slotIndexRef.current = getSlotIndex(toast.id);
-  }
-  const slotIdx = slotIndexRef.current;
+  const [slotIdx] = useState(() => getSlotIndex(toast.id));
   const slot = animationPool[slotIdx];
   const tracker = slotTrackers[slotIdx];
 
@@ -351,67 +133,72 @@ const ToastItem = ({ toast, index, theme, position, isTopToast, registerTopToast
   const entryFromY = isBottom ? ENTRY_OFFSET : -ENTRY_OFFSET;
   const exitToY = isBottom ? EXIT_OFFSET : -EXIT_OFFSET;
 
-  const prevType = useRef(toast.type);
+  const [wasLoading, setWasLoading] = useState(toast.type === "loading");
   const [showIcon, setShowIcon] = useState(false);
 
-  // Release slot on unmount
+  // biome-ignore lint/correctness/useExhaustiveDependencies: mount-only effect
   useEffect(() => {
-    return () => {
-      releaseSlot(toast.id);
-    };
-  }, [toast.id]);
-
-  // Trigger entry animation on mount
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally run only on mount
-  useEffect(() => {
-    // Initialize and trigger entry animation
     slot.progress.value = 0;
     slot.translationY.value = 0;
     slot.stackIndex.value = index;
     slot.progress.value = withTiming(1, { duration: ENTRY_DURATION, easing: EASING });
+
+    const iconTimeout = setTimeout(() => setShowIcon(true), 50);
+
+    return () => {
+      clearTimeout(iconTimeout);
+      releaseSlot(toast.id);
+    };
   }, []);
-
-  // Trigger exit animation when isExiting changes
-  useEffect(() => {
-    if (toast.isExiting && !tracker.wasExiting) {
-      tracker.wasExiting = true;
-      slot.progress.value = withTiming(0, { duration: EXIT_DURATION, easing: EASING });
-      slot.translationY.value = withTiming(exitToY, { duration: EXIT_DURATION, easing: EASING });
-    }
-  }, [toast.isExiting, slot, tracker, exitToY]);
-
-  // Trigger stack position animation when index changes
-  useEffect(() => {
-    if (tracker.initialized && index !== tracker.prevIndex) {
-      slot.stackIndex.value = withTiming(index, { duration: STACK_TRANSITION_DURATION, easing: EASING });
-    }
-    tracker.prevIndex = index;
-    tracker.initialized = true;
-  }, [index, slot, tracker]);
-
-  // Defer icon rendering until after entry animation starts
-  useEffect(() => {
-    const timeout = setTimeout(() => setShowIcon(true), 50);
-    return () => clearTimeout(timeout);
-  }, []);
-
-  // Only animate icon when transitioning from loading (promise resolution)
-  const shouldAnimateIcon = prevType.current === "loading" && toast.type !== "loading";
-  prevType.current = toast.type;
 
   const dismissToast = useCallback(() => {
     toastStore.hide(toast.id);
   }, [toast.id]);
 
-  // Register with container when this is the top toast
   useEffect(() => {
-    if (isTopToast) {
-      registerTopToast({ slot, dismiss: dismissToast });
-      return () => registerTopToast(null);
-    }
-  }, [isTopToast, registerTopToast, slot, dismissToast]);
+    let loadingTimeout: ReturnType<typeof setTimeout> | null = null;
 
-  // Animated style - all computation happens on UI thread
+    if (toast.isExiting && !tracker.wasExiting) {
+      tracker.wasExiting = true;
+      slot.progress.value = withTiming(0, { duration: EXIT_DURATION, easing: EASING });
+      slot.translationY.value = withTiming(exitToY, { duration: EXIT_DURATION, easing: EASING });
+    }
+
+    if (tracker.initialized && index !== tracker.prevIndex) {
+      slot.stackIndex.value = withTiming(index, { duration: STACK_TRANSITION_DURATION, easing: EASING });
+    }
+    tracker.prevIndex = index;
+    tracker.initialized = true;
+
+    if (toast.type === "loading") {
+      setWasLoading(true);
+    } else if (wasLoading) {
+      loadingTimeout = setTimeout(() => setWasLoading(false), ICON_ANIMATION_DURATION + 50);
+    }
+
+    if (isTopToast) {
+      registerTopToast({ slot: slot as AnimSlot, dismiss: dismissToast });
+    }
+
+    return () => {
+      if (loadingTimeout) clearTimeout(loadingTimeout);
+      if (isTopToast) registerTopToast(null);
+    };
+  }, [
+    toast.isExiting,
+    index,
+    slot,
+    tracker,
+    exitToY,
+    toast.type,
+    wasLoading,
+    isTopToast,
+    registerTopToast,
+    dismissToast,
+  ]);
+
+  const shouldAnimateIcon = wasLoading && toast.type !== "loading";
+
   const animatedStyle = useAnimatedStyle(() => {
     const baseTranslateY = interpolate(slot.progress.value, [0, 1], [entryFromY, 0]);
     const stackOffsetY = isBottom
@@ -517,10 +304,6 @@ const MemoizedToastItem = memo(ToastItem, (prev, next) => {
     prev.isTopToast === next.isTopToast
   );
 });
-
-// ============================================================================
-// Styles
-// ============================================================================
 
 const styles = StyleSheet.create({
   container: {
