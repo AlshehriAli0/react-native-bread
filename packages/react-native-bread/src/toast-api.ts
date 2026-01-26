@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { scheduleOnRN } from "react-native-worklets";
 import { toastStore } from "./toast-store";
 import type {
   CustomContentRenderFn,
@@ -44,33 +45,44 @@ const parseErrorMessage = (
 const promiseToast = async <T>(promise: Promise<T>, messages: PromiseMessages): Promise<PromiseResult<T>> => {
   const loadingCfg = parseMessage(messages.loading);
 
-  const toastId = toastStore.show(
-    loadingCfg.title,
-    loadingCfg.description,
-    "loading",
-    loadingCfg.duration ?? 60 * 60 * 1000
-  );
+  // Get toastId by scheduling on RN thread to avoid worklet issues
+  let toastId = "";
+  await new Promise<void>(resolve => {
+    scheduleOnRN(() => {
+      toastId = toastStore.show(
+        loadingCfg.title,
+        loadingCfg.description,
+        "loading",
+        loadingCfg.duration ?? 60 * 60 * 1000
+      );
+      resolve();
+    });
+  });
 
   try {
     const result = await promise;
 
     const successCfg = parseMessage(messages.success);
-    toastStore.updateToast(toastId, {
-      title: successCfg.title,
-      description: successCfg.description,
-      type: "success",
-      duration: successCfg.duration ?? 4000,
+    scheduleOnRN(() => {
+      toastStore.updateToast(toastId, {
+        title: successCfg.title,
+        description: successCfg.description,
+        type: "success",
+        duration: successCfg.duration ?? 4000,
+      });
     });
 
     return { data: result, success: true };
   } catch (err) {
     const error = err instanceof Error ? err : new Error(String(err));
     const errorCfg = parseErrorMessage(messages.error, error);
-    toastStore.updateToast(toastId, {
-      title: errorCfg.title,
-      description: errorCfg.description,
-      type: "error",
-      duration: errorCfg.duration ?? 4000,
+    scheduleOnRN(() => {
+      toastStore.updateToast(toastId, {
+        title: errorCfg.title,
+        description: errorCfg.description,
+        type: "error",
+        duration: errorCfg.duration ?? 4000,
+      });
     });
 
     return { error, success: false };
