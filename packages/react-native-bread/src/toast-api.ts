@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { scheduleOnRN } from "react-native-worklets";
 import { toastStore } from "./toast-store";
 import type {
   CustomContentRenderFn,
@@ -42,57 +41,37 @@ const parseErrorMessage = (
   return parseMessage(input);
 };
 
-const showLoadingToast = (messages: PromiseMessages, callback: (toastId: string) => void) => {
+const promiseToast = async <T>(promise: Promise<T>, messages: PromiseMessages): Promise<PromiseResult<T>> => {
   const loadingCfg = parseMessage(messages.loading);
+
   const toastId = toastStore.show(
     loadingCfg.title,
     loadingCfg.description,
     "loading",
     loadingCfg.duration ?? 60 * 60 * 1000
   );
-  callback(toastId);
-};
-
-const updateToastSuccess = (toastId: string, messages: PromiseMessages) => {
-  const successCfg = parseMessage(messages.success);
-  toastStore.updateToast(toastId, {
-    title: successCfg.title,
-    description: successCfg.description,
-    type: "success",
-    duration: successCfg.duration ?? 4000,
-  });
-};
-
-const updateToastError = (toastId: string, messages: PromiseMessages, error: Error) => {
-  const errorCfg = parseErrorMessage(messages.error, error);
-  toastStore.updateToast(toastId, {
-    title: errorCfg.title,
-    description: errorCfg.description,
-    type: "error",
-    duration: errorCfg.duration ?? 4000,
-  });
-};
-
-const promiseToast = async <T>(promise: Promise<T>, messages: PromiseMessages): Promise<PromiseResult<T>> => {
-  // Get toastId by scheduling on RN thread to avoid worklet issues
-
-  let toastId = "";
-  await new Promise<void>(resolve => {
-    scheduleOnRN(showLoadingToast, messages, (id: string) => {
-      toastId = id;
-      resolve();
-    });
-  });
 
   try {
     const result = await promise;
 
-    scheduleOnRN(updateToastSuccess, toastId, messages);
+    const successCfg = parseMessage(messages.success);
+    toastStore.updateToast(toastId, {
+      title: successCfg.title,
+      description: successCfg.description,
+      type: "success",
+      duration: successCfg.duration ?? 4000,
+    });
 
     return { data: result, success: true };
   } catch (err) {
     const error = err instanceof Error ? err : new Error(String(err));
-    scheduleOnRN(updateToastError, toastId, messages, error);
+    const errorCfg = parseErrorMessage(messages.error, error);
+    toastStore.updateToast(toastId, {
+      title: errorCfg.title,
+      description: errorCfg.description,
+      type: "error",
+      duration: errorCfg.duration ?? 4000,
+    });
 
     return { error, success: false };
   }

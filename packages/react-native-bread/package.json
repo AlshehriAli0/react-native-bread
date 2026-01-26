@@ -1,6 +1,6 @@
 {
   "name": "react-native-bread",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "description": "A lightweight toast library for React Native with premium feeling animations and complex gesture support",
   "main": "lib/commonjs/index.js",
   "module": "lib/module/index.js",
@@ -32,10 +32,9 @@
   ],
   "scripts": {
     "build": "bob build",
-    "minify": "find lib -name '*.js' -not -path '*/node_modules/*' -exec terser {} -o {} -c directives=false -m --module \\;",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf lib",
-    "prepare": "bob build && npm run minify"
+    "prepare": "bob build"
   },
   "devDependencies": {
     "react": "19.1.0",
