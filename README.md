@@ -6,20 +6,19 @@ An extremely lightweight, opinionated toast component for React Native.
 
 ## Features
 
-- **Extremely lightweight** package, only 14KB packed size
+- **Lightweight** - only 20KB packed size
+- **New Architecture** - built exclusively for React Native 0.76+ with Fabric
 - Clean, imperative API inspired by [Sonner](https://sonner.emilkowal.ski/)
 - Zero setup - add one component, start toasting. No hooks, no providers
-- Built for mobile with smooth 60fps animations powered by Reanimated
+- Smooth 60fps animations powered by Reanimated
 - Natural swipe gestures that feel native to the platform
 - Multiple toast types: `success`, `error`, `info`, `promise`, and `custom`
 - Promise handling with automatic loading → success/error states
-- Complex animations and gestures but with high performance
 - Toast stacking with configurable limits
-- Position toasts at top or bottom of screen
-- **RTL built-in support** - perfect for Arabic and other RTL languages
+- **Works above modals** - automatic on iOS, simple setup on Android
+- **RTL support** - perfect for Arabic and other RTL languages
 - Completely customizable - colors, icons, styles, animations
 - Full Expo compatibility
-- Imperative API works anywhere - components, utilities, event handlers
 
 
 
@@ -38,19 +37,20 @@ This package requires the following peer dependencies:
 | [react-native-reanimated](https://docs.swmansion.com/react-native-reanimated/docs/fundamentals/getting-started) | >= 4.1.0 |
 | [react-native-gesture-handler](https://docs.swmansion.com/react-native-gesture-handler/docs/) | >= 2.25.0 |
 | [react-native-safe-area-context](https://docs.expo.dev/versions/latest/sdk/safe-area-context/) | >= 5.0.0 |
+| [react-native-screens](https://docs.swmansion.com/react-native-screens/) | >= 4.0.0 |
 | [react-native-svg](https://github.com/software-mansion/react-native-svg) | >= 15.8.0 |
 | [react-native-worklets](https://github.com/margelo/react-native-worklets-core) | >= 0.5.0 |
 
 If you don't have these installed, you can install all peer dependencies at once:
 
 ```sh
-bun add react-native-reanimated react-native-gesture-handler react-native-safe-area-context react-native-svg react-native-worklets
+bun add react-native-reanimated react-native-gesture-handler react-native-safe-area-context react-native-screens react-native-svg react-native-worklets
 ```
 
 Or with npm:
 
 ```sh
-npm install react-native-reanimated react-native-gesture-handler react-native-safe-area-context react-native-svg react-native-worklets
+npm install react-native-reanimated react-native-gesture-handler react-native-safe-area-context react-native-screens react-native-svg react-native-worklets
 ```
 
 > **Note**: Make sure your `react-native-reanimated` and `react-native-worklets` versions are compatible. Reanimated 4.1.x works with worklets 0.5.x-0.7.x, while Reanimated 4.2.x requires worklets 0.7.x only.
@@ -217,9 +217,25 @@ Available options include:
 | `toast.dismiss(id)` | Dismiss a specific toast |
 | `toast.dismissAll()` | Dismiss all toasts |
 
-## Known Issues
+## Toasts in Modals
 
-**Modal Pages**: Toasts may render behind React Native's `screenOptions={{ presentation: "modal" }}`  since they are mounted at the native layer above the whole app.
+Toasts automatically appear above native modals on **iOS**.
 
-**Solution**: Use `screenOptions={{ presentation: "containedModal" }}`, or add another `<BreadLoaf>` inside the modal page.
+On **Android**, add `<ToastPortal />` inside your modal layouts:
+
+```tsx
+// app/(modal)/_layout.tsx
+import { Stack } from "expo-router";
+import { Platform } from "react-native";
+import { ToastPortal } from "react-native-bread";
+
+export default function ModalLayout() {
+  return (
+    <>
+      <Stack screenOptions={{ headerShown: false }} />
+      {Platform.OS === "android" && <ToastPortal />}
+    </>
+  );
+}
+```
 

@@ -14,6 +14,7 @@ export default function RootLayout() {
         <Stack.Screen name="(default)" options={{ headerShown: false }} />
         <Stack.Screen name="(custom)" options={{ headerShown: false }} />
         <Stack.Screen name="(global)" options={{ headerShown: false }} />
+        <Stack.Screen name="(modal)" options={{ headerShown: false, presentation: "modal" }} />
       </Stack>
       <StatusBar style="dark" />
     </GestureHandlerRootView>

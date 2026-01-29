@@ -1,8 +1,18 @@
 import { useEffect } from "react";
-import { StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
+import { FullWindowOverlay } from "react-native-screens";
 import { ToastContainer } from "./toast";
 import { toastStore } from "./toast-store";
 import type { ToastConfig } from "./types";
+
+function ToastContent() {
+  return (
+    <View style={styles.container} pointerEvents="box-none">
+      <ToastContainer />
+    </View>
+  );
+}
+
 
 interface BreadLoafProps {
   /**
@@ -62,11 +72,47 @@ export function BreadLoaf({ config }: BreadLoafProps) {
     };
   }, [config]);
 
-  return (
-    <View style={styles.container} pointerEvents="box-none">
-      <ToastContainer />
-    </View>
-  );
+  // iOS: use FullWindowOverlay to render above native modals
+  if (Platform.OS === "ios") {
+    return (
+      <FullWindowOverlay>
+        <ToastContent />
+      </FullWindowOverlay>
+    );
+  }
+
+  return <ToastContent />;
+}
+
+/**
+ * Lightweight toast renderer for use inside modal screens.
+ *
+ * On Android, native modals render above the root React view, so toasts from
+ * the main `<BreadLoaf />` won't be visible. Add `<ToastPortal />` inside your
+ * modal layouts to show toasts above modal content.
+ *
+ * This component only renders toasts - it does not accept configuration.
+ * All styling/behavior is inherited from your root `<BreadLoaf />` config.
+ *
+ * @example
+ * ```tsx
+ * // app/(modal)/_layout.tsx
+ * import { Stack } from 'expo-router';
+ * import { ToastPortal } from 'react-native-bread';
+ * import { Platform } from 'react-native';
+ *
+ * export default function ModalLayout() {
+ *   return (
+ *     <>
+ *       <Stack screenOptions={{ headerShown: false }} />
+ *       {Platform.OS === 'android' && <ToastPortal />}
+ *     </>
+ *   );
+ * }
+ * ```
+ */
+export function ToastPortal() {
+  return <ToastContent />;
 }
 
 const styles = StyleSheet.create({

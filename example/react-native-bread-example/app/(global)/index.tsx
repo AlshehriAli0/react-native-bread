@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from "react-native";
 import { BreadLoaf, toast } from "react-native-bread";
 
 type Position = "top" | "bottom";
@@ -72,18 +72,18 @@ export default function GlobalConfigScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Position</Text>
           <View style={styles.segmented}>
-            <Pressable
+            <TouchableOpacity
               style={[styles.segment, position === "top" && styles.segmentActive]}
               onPress={() => setPosition("top")}
             >
               <Text style={[styles.segmentText, position === "top" && styles.segmentTextActive]}>Top</Text>
-            </Pressable>
-            <Pressable
+            </TouchableOpacity>
+            <TouchableOpacity
               style={[styles.segment, position === "bottom" && styles.segmentActive]}
               onPress={() => setPosition("bottom")}
             >
               <Text style={[styles.segmentText, position === "bottom" && styles.segmentTextActive]}>Bottom</Text>
-            </Pressable>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -104,21 +104,21 @@ export default function GlobalConfigScreen() {
               <Text style={styles.optionDesc}>Maximum visible toasts</Text>
             </View>
             <View style={styles.stepper}>
-              <Pressable
+              <TouchableOpacity
                 style={[styles.stepperButton, maxStack <= 1 && styles.stepperButtonDisabled]}
                 onPress={() => setMaxStack(Math.max(1, maxStack - 1))}
                 disabled={maxStack <= 1}
               >
                 <Text style={[styles.stepperButtonText, maxStack <= 1 && styles.stepperButtonTextDisabled]}>−</Text>
-              </Pressable>
+              </TouchableOpacity>
               <Text style={styles.stepperValue}>{maxStack}</Text>
-              <Pressable
+              <TouchableOpacity
                 style={[styles.stepperButton, maxStack >= 10 && styles.stepperButtonDisabled]}
                 onPress={() => setMaxStack(Math.min(10, maxStack + 1))}
                 disabled={maxStack >= 10}
               >
                 <Text style={[styles.stepperButtonText, maxStack >= 10 && styles.stepperButtonTextDisabled]}>+</Text>
-              </Pressable>
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -158,19 +158,19 @@ export default function GlobalConfigScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Test It</Text>
           <View style={styles.buttons}>
-            <Pressable style={styles.button} onPress={showToast}>
+            <TouchableOpacity style={styles.button} onPress={showToast}>
               <Text style={styles.buttonText}>Show Toast</Text>
-            </Pressable>
-            <Pressable style={[styles.button, styles.buttonSecondary]} onPress={showMultiple}>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.button, styles.buttonSecondary]} onPress={showMultiple}>
               <Text style={styles.buttonText}>Show 3 Toasts</Text>
-            </Pressable>
+            </TouchableOpacity>
           </View>
         </View>
 
         <View style={styles.navButtons}>
-          <Pressable style={styles.navButton} onPress={() => router.back()} hitSlop={20}>
+          <TouchableOpacity style={styles.navButton} onPress={() => router.back()} hitSlop={20}>
             <Text style={styles.navText}>← Back to Default</Text>
-          </Pressable>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </>

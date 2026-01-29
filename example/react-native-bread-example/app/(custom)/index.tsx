@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { type CustomContentProps, toast } from "react-native-bread";
 
 const CustomToastContent = ({ dismiss }: CustomContentProps) => (
@@ -9,9 +9,9 @@ const CustomToastContent = ({ dismiss }: CustomContentProps) => (
       <Text style={customStyles.name}>Ali</Text>
       <Text style={customStyles.message}>Hey! Check out this custom toast</Text>
     </View>
-    <Pressable style={customStyles.button} onPress={dismiss}>
+    <TouchableOpacity style={customStyles.button} onPress={dismiss}>
       <Text style={customStyles.buttonText}>Reply</Text>
-    </Pressable>
+    </TouchableOpacity>
   </View>
 );
 
@@ -65,7 +65,7 @@ export default function CustomScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Customizations</Text>
         <View style={styles.buttons}>
-          <Pressable
+          <TouchableOpacity
             style={styles.button}
             onPress={() =>
               toast.success("Custom Icon", {
@@ -75,9 +75,9 @@ export default function CustomScreen() {
             }
           >
             <Text style={styles.buttonText}>Custom Icon</Text>
-          </Pressable>
+          </TouchableOpacity>
 
-          <Pressable
+          <TouchableOpacity
             style={styles.button}
             onPress={() =>
               toast.info("Pill Shape", {
@@ -86,9 +86,9 @@ export default function CustomScreen() {
             }
           >
             <Text style={styles.buttonText}>Custom Style</Text>
-          </Pressable>
+          </TouchableOpacity>
 
-          <Pressable
+          <TouchableOpacity
             style={styles.button}
             onPress={() =>
               toast.error("Stuck!", {
@@ -99,9 +99,9 @@ export default function CustomScreen() {
             }
           >
             <Text style={styles.buttonText}>Non-dismissible</Text>
-          </Pressable>
+          </TouchableOpacity>
 
-          <Pressable
+          <TouchableOpacity
             style={styles.button}
             onPress={() =>
               toast.success("No X button", {
@@ -110,9 +110,9 @@ export default function CustomScreen() {
             }
           >
             <Text style={styles.buttonText}>No Close Button</Text>
-          </Pressable>
+          </TouchableOpacity>
 
-          <Pressable
+          <TouchableOpacity
             style={[styles.button, { backgroundColor: "#8b5cf6" }]}
             onPress={() =>
               toast.custom(CustomToastContent, {
@@ -121,9 +121,9 @@ export default function CustomScreen() {
             }
           >
             <Text style={styles.buttonText}>Custom Content</Text>
-          </Pressable>
+          </TouchableOpacity>
 
-          <Pressable
+          <TouchableOpacity
             style={[styles.button, { backgroundColor: "#ec4899" }]}
             onPress={() =>
               toast.custom(
@@ -152,7 +152,7 @@ export default function CustomScreen() {
                       <Text style={{ fontSize: 15, fontWeight: "700", color: "#111" }}>Achievement Unlocked!</Text>
                       <Text style={{ fontSize: 13, color: "#6b7280" }}>You created a custom toast</Text>
                     </View>
-                    <Pressable
+                    <TouchableOpacity
                       onPress={dismiss}
                       style={{
                         backgroundColor: "#ec4899",
@@ -162,7 +162,7 @@ export default function CustomScreen() {
                       }}
                     >
                       <Text style={{ color: "#fff", fontSize: 13, fontWeight: "600" }}>Nice!</Text>
-                    </Pressable>
+                    </TouchableOpacity>
                   </View>
                 ),
                 { style: { backgroundColor: "#fff" } }
@@ -170,14 +170,14 @@ export default function CustomScreen() {
             }
           >
             <Text style={styles.buttonText}>Inline Custom</Text>
-          </Pressable>
+          </TouchableOpacity>
         </View>
       </View>
 
       <View style={styles.navButtons}>
-        <Pressable style={styles.navButton} onPress={() => router.back()} hitSlop={20}>
+        <TouchableOpacity style={styles.navButton} onPress={() => router.back()} hitSlop={20}>
           <Text style={styles.navText}>← Back to Default</Text>
-        </Pressable>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );

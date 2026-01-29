@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { toast } from "react-native-bread";
 
 export default function DefaultScreen() {
@@ -14,28 +14,28 @@ export default function DefaultScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Try it out</Text>
         <View style={styles.buttons}>
-          <Pressable
+          <TouchableOpacity
             style={[styles.button, { backgroundColor: "#10b981" }]}
             onPress={() => toast.success("Success!", "Your changes have been saved")}
           >
             <Text style={styles.buttonText}>Success</Text>
-          </Pressable>
+          </TouchableOpacity>
 
-          <Pressable
+          <TouchableOpacity
             style={[styles.button, { backgroundColor: "#ef4444" }]}
             onPress={() => toast.error("Error!", "Something went wrong")}
           >
             <Text style={styles.buttonText}>Error</Text>
-          </Pressable>
+          </TouchableOpacity>
 
-          <Pressable
+          <TouchableOpacity
             style={[styles.button, { backgroundColor: "#3b82f6" }]}
             onPress={() => toast.info("Info", "Swipe up to dismiss")}
           >
             <Text style={styles.buttonText}>Info</Text>
-          </Pressable>
+          </TouchableOpacity>
 
-          <Pressable
+          <TouchableOpacity
             style={[styles.button, { backgroundColor: "#8b5cf6" }]}
             onPress={() => {
               const fakeApi = new Promise((resolve, reject) =>
@@ -49,17 +49,20 @@ export default function DefaultScreen() {
             }}
           >
             <Text style={styles.buttonText}>Promise</Text>
-          </Pressable>
+          </TouchableOpacity>
         </View>
       </View>
 
       <View style={styles.navButtons}>
-        <Pressable style={styles.navButton} onPress={() => router.push("/(custom)")} hitSlop={20}>
+        <TouchableOpacity style={styles.navButton} onPress={() => router.push("/(custom)")} hitSlop={20}>
           <Text style={styles.navText}>Per-Toast Options →</Text>
-        </Pressable>
-        <Pressable style={styles.navButton} onPress={() => router.push("/(global)")} hitSlop={20}>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navButton} onPress={() => router.push("/(global)")} hitSlop={20}>
           <Text style={styles.navText}>Global Config →</Text>
-        </Pressable>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navButton} onPress={() => router.push("/(modal)")} hitSlop={20}>
+          <Text style={styles.navText}>Modal Example →</Text>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );
