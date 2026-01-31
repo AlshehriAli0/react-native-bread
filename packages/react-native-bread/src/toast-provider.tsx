@@ -91,6 +91,9 @@ export function BreadLoaf({ config }: BreadLoafProps) {
  * the main `<BreadLoaf />` won't be visible. Add `<ToastPortal />` inside your
  * modal layouts to show toasts above modal content.
  *
+ * This component only renders on Android - it returns `null` on iOS where
+ * `<BreadLoaf />` already handles modal overlay via `FullWindowOverlay`.
+ *
  * This component only renders toasts - it does not accept configuration.
  * All styling/behavior is inherited from your root `<BreadLoaf />` config.
  *
@@ -99,19 +102,21 @@ export function BreadLoaf({ config }: BreadLoafProps) {
  * // app/(modal)/_layout.tsx
  * import { Stack } from 'expo-router';
  * import { ToastPortal } from 'react-native-bread';
- * import { Platform } from 'react-native';
  *
  * export default function ModalLayout() {
  *   return (
  *     <>
  *       <Stack screenOptions={{ headerShown: false }} />
- *       {Platform.OS === 'android' && <ToastPortal />}
+ *       <ToastPortal />
  *     </>
  *   );
  * }
  * ```
  */
 export function ToastPortal() {
+  if (Platform.OS !== "android") {
+    return null;
+  }
   return <ToastContent />;
 }
 

@@ -221,21 +221,39 @@ Available options include:
 
 Toasts automatically appear above native modals on **iOS**.
 
-On **Android**, add `<ToastPortal />` inside your modal layouts:
+On **Android**, you have two options:
+
+### Option 1: Use a Contained Modal
+
+The simplest fix is to use `containedModal` presentation instead of `modal`. On Android, `modal` and `containedModal` look nearly identical, so this is an easy swap:
+
+```tsx
+<Stack.Screen
+  name="(modal)"
+  options={{ presentation: Platform.OS === "android" ? "containedModal" : "modal" }}
+/>
+```
+
+This renders the modal within the React hierarchy on Android, so toasts from your root `<BreadLoaf />` remain visible.
+
+### Option 2: Use ToastPortal
+
+If you need native modals, add `<ToastPortal />` inside your modal layouts:
 
 ```tsx
 // app/(modal)/_layout.tsx
 import { Stack } from "expo-router";
-import { Platform } from "react-native";
 import { ToastPortal } from "react-native-bread";
 
 export default function ModalLayout() {
   return (
     <>
       <Stack screenOptions={{ headerShown: false }} />
-      {Platform.OS === "android" && <ToastPortal />}
+      <ToastPortal />
     </>
   );
 }
 ```
+
+The `ToastPortal` component only renders on Android - it returns `null` on iOS, so no platform check is needed.
 

@@ -1,5 +1,4 @@
 import { Stack } from "expo-router";
-import { Platform } from "react-native";
 import { ToastPortal } from "react-native-bread";
 
 export default function ModalLayout() {
@@ -8,7 +7,7 @@ export default function ModalLayout() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
       </Stack>
-      {Platform.OS === "android" && <ToastPortal />}
+      <ToastPortal />
     </>
   );
 }
