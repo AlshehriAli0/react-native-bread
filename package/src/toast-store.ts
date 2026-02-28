@@ -23,6 +23,7 @@ const DEFAULT_THEME: ToastTheme = {
   titleStyle: {},
   descriptionStyle: {},
   defaultDuration: 4000,
+  deduplication: false,
 };
 
 function mergeConfig(config: ToastConfig | undefined): ToastTheme {
@@ -55,6 +56,7 @@ function mergeConfig(config: ToastConfig | undefined): ToastTheme {
     titleStyle: { ...DEFAULT_THEME.titleStyle, ...config.titleStyle },
     descriptionStyle: { ...DEFAULT_THEME.descriptionStyle, ...config.descriptionStyle },
     defaultDuration: config.defaultDuration ?? DEFAULT_THEME.defaultDuration,
+    deduplication: config.deduplication ?? DEFAULT_THEME.deduplication,
   };
 }
 
@@ -104,12 +106,35 @@ class ToastStore {
   ): string => {
     const actualDuration = duration ?? options?.duration ?? this.theme.defaultDuration;
     const maxToasts = this.theme.stacking ? this.theme.maxStack : 1;
+    const resolvedDescription = description ?? options?.description;
+
+    const shouldDedup = type !== "loading" && (options?.deduplication ?? this.theme.deduplication);
+    if (shouldDedup) {
+      const deduplicationId = options?.id;
+      const frontToast = this.state.visibleToasts.find(t => !t.isExiting);
+      const duplicate = deduplicationId
+        ? this.state.visibleToasts.find(t => !t.isExiting && t.options?.id === deduplicationId)
+        : frontToast && frontToast.title === title && frontToast.type === type && frontToast.description === resolvedDescription
+          ? frontToast
+          : undefined;
+
+      if (duplicate) {
+        this.updateToast(duplicate.id, {
+          title,
+          description: resolvedDescription,
+          type,
+          deduplicatedAt: Date.now(),
+          duration: actualDuration,
+        });
+        return duplicate.id;
+      }
+    }
 
     const id = `toast-${++this.toastIdCounter}`;
     const newToast: Toast = {
       id,
       title,
-      description: description ?? options?.description,
+      description: resolvedDescription,
       type,
       duration: actualDuration,
       createdAt: Date.now(),

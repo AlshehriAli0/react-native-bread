@@ -5,6 +5,7 @@ export interface AnimSlot {
   progress: SharedValue<number>;
   translationY: SharedValue<number>;
   stackIndex: SharedValue<number>;
+  deduplication: SharedValue<number>;
 }
 
 export interface SlotTracker {
@@ -17,6 +18,7 @@ export const animationPool: AnimSlot[] = Array.from({ length: POOL_SIZE }, () =>
   progress: makeMutable(0),
   translationY: makeMutable(0),
   stackIndex: makeMutable(0),
+  deduplication: makeMutable(0),
 }));
 
 export const slotTrackers: SlotTracker[] = Array.from({ length: POOL_SIZE }, () => ({
