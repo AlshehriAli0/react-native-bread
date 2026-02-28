@@ -43,7 +43,11 @@ export interface ToastTheme {
   position: ToastPosition;
   /** Extra offset from safe area edge (in addition to safe area insets) */
   offset: number;
-  /** Enable right-to-left layout (reverses icon/text order) */
+  /**
+   * Enable right-to-left layout at the code level (reverses icon/text order and text alignment).
+   * Only needed when you handle RTL in JavaScript — native RTL (e.g. via `I18nManager.forceRTL`)
+   * already flips the entire layout automatically, so this option is unnecessary in that case.
+   */
   rtl: boolean;
   /** Whether to show multiple toasts stacked (default: true). When false, only one toast shows at a time. */
   stacking: boolean;

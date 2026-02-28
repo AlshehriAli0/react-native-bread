@@ -16,7 +16,7 @@ An extremely lightweight, opinionated toast component for React Native.
 - Promise handling with automatic loading → success/error states
 - Toast stacking with configurable limits
 - **Works above modals** - automatic on iOS, simple setup on Android
-- **RTL support** - perfect for Arabic and other RTL languages
+- **RTL support** - code-level RTL for when you're not using native RTL (`I18nManager`)
 - Completely customizable - colors, icons, styles, animations
 - Full Expo compatibility
 
@@ -181,7 +181,7 @@ Customize all toasts globally via the `config` prop on `<BreadLoaf />`:
 <BreadLoaf
   config={{
     position: 'bottom',
-    rtl: false, // Enable for RTL languages
+    rtl: false, // Code-level RTL — not needed if using native RTL (I18nManager)
     stacking: true,
     maxStack: 3,
     defaultDuration: 4000,
