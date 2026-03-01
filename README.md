@@ -7,7 +7,7 @@ An extremely lightweight, opinionated toast component for React Native.
 ## Features
 
 - **Lightweight** - only 20KB packed size
-- **New Architecture** - built exclusively for React Native 0.76+ with Fabric
+- **New Architecture** - built exclusively for React Native 0.76+
 - Clean, imperative API inspired by [Sonner](https://sonner.emilkowal.ski/)
 - Zero setup - add one component, start toasting. No hooks, no providers
 - Smooth 60fps animations powered by Reanimated
@@ -19,7 +19,7 @@ An extremely lightweight, opinionated toast component for React Native.
 - **RTL support** - code-level RTL for when you're not using native RTL (`I18nManager`)
 - Completely customizable - colors, icons, styles, animations
 - Full Expo compatibility
-- **React Compiler compatible** - uses `.set()` / `.value` API for shared values
+- **React Compiler compatible** - all components are written to be optimized by react compiler
 
 
 
