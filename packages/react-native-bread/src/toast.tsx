@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { interpolate, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
@@ -30,74 +30,76 @@ import { useToastState } from "./use-toast-state";
 
 export const ToastContainer = () => {
   const { top, bottom } = useSafeAreaInsets();
-  const { visibleToasts, theme, toastsWithIndex, isBottom, topToastRef, isBottomRef, isDismissibleRef } =
-    useToastState();
+  const {
+    visibleToasts,
+    theme,
+    toastsWithIndex,
+    isBottom,
+    topToastMutable,
+    isBottomMutable,
+    isDismissibleMutable,
+  } = useToastState();
 
   const shouldDismiss = useSharedValue(false);
 
-  const panGesture = useMemo(
-    () =>
-      Gesture.Pan()
-        .onStart(() => {
-          "worklet";
-          shouldDismiss.set(false);
-        })
-        .onUpdate(event => {
-          "worklet";
-          if (!isDismissibleRef.current.value) return;
-          const ref = topToastRef.current.value;
-          if (!ref) return;
+  const panGesture = Gesture.Pan()
+    .onStart(() => {
+      "worklet";
+      shouldDismiss.set(false);
+    })
+    .onUpdate(event => {
+      "worklet";
+      if (!isDismissibleMutable.value) return;
+      const ref = topToastMutable.value;
+      if (!ref) return;
 
-          const { slot } = ref;
-          const bottom = isBottomRef.current.value;
-          const rawY = event.translationY;
-          const dismissDrag = bottom ? rawY : -rawY;
-          const resistDrag = bottom ? -rawY : rawY;
+      const { slot } = ref;
+      const bottom = isBottomMutable.value;
+      const rawY = event.translationY;
+      const dismissDrag = bottom ? rawY : -rawY;
+      const resistDrag = bottom ? -rawY : rawY;
 
-          if (dismissDrag > 0) {
-            const clampedY = bottom ? Math.min(rawY, MAX_DRAG_CLAMP) : Math.max(rawY, -MAX_DRAG_CLAMP);
-            slot.translationY.value = clampedY;
+      if (dismissDrag > 0) {
+        const clampedY = bottom ? Math.min(rawY, MAX_DRAG_CLAMP) : Math.max(rawY, -MAX_DRAG_CLAMP);
+        slot.translationY.set(clampedY);
 
-            const shouldTriggerDismiss =
-              dismissDrag > DISMISS_THRESHOLD ||
-              (bottom ? event.velocityY > DISMISS_VELOCITY_THRESHOLD : event.velocityY < -DISMISS_VELOCITY_THRESHOLD);
-            shouldDismiss.set(shouldTriggerDismiss);
-          } else {
-            const exponentialDrag = MAX_DRAG_RESISTANCE * (1 - Math.exp(-resistDrag / 250));
-            slot.translationY.value = bottom
-              ? -Math.min(exponentialDrag, MAX_DRAG_RESISTANCE)
-              : Math.min(exponentialDrag, MAX_DRAG_RESISTANCE);
-            shouldDismiss.value = false;
-          }
-        })
-        .onEnd(() => {
-          "worklet";
-          if (!isDismissibleRef.current.value) return;
-          const ref = topToastRef.current.value;
-          if (!ref) return;
+        const shouldTriggerDismiss =
+          dismissDrag > DISMISS_THRESHOLD ||
+          (bottom ? event.velocityY > DISMISS_VELOCITY_THRESHOLD : event.velocityY < -DISMISS_VELOCITY_THRESHOLD);
+        shouldDismiss.set(shouldTriggerDismiss);
+      } else {
+        const exponentialDrag = MAX_DRAG_RESISTANCE * (1 - Math.exp(-resistDrag / 250));
+        slot.translationY.set(
+          bottom ? -Math.min(exponentialDrag, MAX_DRAG_RESISTANCE) : Math.min(exponentialDrag, MAX_DRAG_RESISTANCE)
+        );
+        shouldDismiss.set(false);
+      }
+    })
+    .onEnd(() => {
+      "worklet";
+      if (!isDismissibleMutable.value) return;
+      const ref = topToastMutable.value;
+      if (!ref) return;
 
-          const { slot } = ref;
-          const bottom = isBottomRef.current.value;
-          if (shouldDismiss.value) {
-            slot.progress.value = withTiming(0, { duration: EXIT_DURATION, easing: EASING });
-            const exitOffset = bottom ? SWIPE_EXIT_OFFSET : -SWIPE_EXIT_OFFSET;
-            slot.translationY.value = withTiming(slot.translationY.value + exitOffset, {
-              duration: EXIT_DURATION,
-              easing: EASING,
-            });
-            scheduleOnRN(ref.dismiss);
-          } else {
-            slot.translationY.value = withTiming(0, { duration: SPRING_BACK_DURATION, easing: EASING });
-          }
-        }),
-    [shouldDismiss, isDismissibleRef, topToastRef, isBottomRef]
-  );
+      const { slot } = ref;
+      const bottom = isBottomMutable.value;
+      if (shouldDismiss.value) {
+        slot.progress.set(withTiming(0, { duration: EXIT_DURATION, easing: EASING }));
+        const exitOffset = bottom ? SWIPE_EXIT_OFFSET : -SWIPE_EXIT_OFFSET;
+        slot.translationY.set(
+          withTiming(slot.translationY.value + exitOffset, { duration: EXIT_DURATION, easing: EASING })
+        );
+        scheduleOnRN(ref.dismiss);
+      } else {
+        slot.translationY.set(withTiming(0, { duration: SPRING_BACK_DURATION, easing: EASING }));
+      }
+    });
 
   const registerTopToast = useCallback(
     (values: TopToastRef | null) => {
-      topToastRef.current.value = values;
+      topToastMutable.set(values);
     },
-    [topToastRef]
+    [topToastMutable]
   );
 
   if (visibleToasts.length === 0) return null;
@@ -138,10 +140,10 @@ const ToastItem = ({ toast, index, theme, position, isTopToast, registerTopToast
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: mount-only effect
   useEffect(() => {
-    slot.progress.value = 0;
-    slot.translationY.value = 0;
-    slot.stackIndex.value = index;
-    slot.progress.value = withTiming(1, { duration: ENTRY_DURATION, easing: EASING });
+    slot.progress.set(0);
+    slot.translationY.set(0);
+    slot.stackIndex.set(index);
+    slot.progress.set(withTiming(1, { duration: ENTRY_DURATION, easing: EASING }));
 
     const iconTimeout = setTimeout(() => setShowIcon(true), 50);
 
@@ -160,12 +162,12 @@ const ToastItem = ({ toast, index, theme, position, isTopToast, registerTopToast
 
     if (toast.isExiting && !tracker.wasExiting) {
       tracker.wasExiting = true;
-      slot.progress.value = withTiming(0, { duration: EXIT_DURATION, easing: EASING });
-      slot.translationY.value = withTiming(exitToY, { duration: EXIT_DURATION, easing: EASING });
+      slot.progress.set(withTiming(0, { duration: EXIT_DURATION, easing: EASING }));
+      slot.translationY.set(withTiming(exitToY, { duration: EXIT_DURATION, easing: EASING }));
     }
 
     if (tracker.initialized && index !== tracker.prevIndex) {
-      slot.stackIndex.value = withTiming(index, { duration: STACK_TRANSITION_DURATION, easing: EASING });
+      slot.stackIndex.set(withTiming(index, { duration: STACK_TRANSITION_DURATION, easing: EASING }));
     }
     tracker.prevIndex = index;
     tracker.initialized = true;

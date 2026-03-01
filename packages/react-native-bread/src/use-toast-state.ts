@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { makeMutable } from "react-native-reanimated";
 import { type Toast, type ToastState, toastStore } from "./toast-store";
 import type { ToastTheme, TopToastRef } from "./types";
@@ -7,9 +7,9 @@ export const useToastState = () => {
   const [visibleToasts, setVisibleToasts] = useState<Toast[]>([]);
   const [theme, setTheme] = useState<ToastTheme>(() => toastStore.getTheme());
 
-  const topToastRef = useRef(makeMutable<TopToastRef | null>(null));
-  const isBottomRef = useRef(makeMutable(theme.position === "bottom"));
-  const isDismissibleRef = useRef(makeMutable(true));
+  const [topToastMutable] = useState(() => makeMutable<TopToastRef | null>(null));
+  const [isBottomMutable] = useState(() => makeMutable(theme.position === "bottom"));
+  const [isDismissibleMutable] = useState(() => makeMutable(true));
 
   const isBottom = theme.position === "bottom";
   const topToast = visibleToasts.find(t => !t.isExiting);
@@ -22,8 +22,8 @@ export const useToastState = () => {
     setVisibleToasts(initialToasts);
 
     const initialTopToast = initialToasts.find(t => !t.isExiting);
-    isBottomRef.current.value = initialTheme.position === "bottom";
-    isDismissibleRef.current.value = initialTopToast?.options?.dismissible ?? initialTheme.dismissible;
+    isBottomMutable.set(initialTheme.position === "bottom");
+    isDismissibleMutable.set(initialTopToast?.options?.dismissible ?? initialTheme.dismissible);
 
     let pendingToasts: Toast[] | null = null;
     let rafId: number | null = null;
@@ -43,14 +43,14 @@ export const useToastState = () => {
           setTheme((prev: ToastTheme) => (prev === currentTheme ? prev : currentTheme));
 
           const topToast = currentToasts.find(t => !t.isExiting);
-          isBottomRef.current.value = currentTheme.position === "bottom";
-          isDismissibleRef.current.value = topToast?.options?.dismissible ?? currentTheme.dismissible;
+          isBottomMutable.set(currentTheme.position === "bottom");
+          isDismissibleMutable.set(topToast?.options?.dismissible ?? currentTheme.dismissible);
         });
       }
     });
 
     return unsubscribe;
-  }, []);
+  }, [isBottomMutable, isDismissibleMutable]);
 
   const toastsWithIndex = useMemo(() => {
     const indices = new Map<string, number>();
@@ -71,8 +71,8 @@ export const useToastState = () => {
     toastsWithIndex,
     isBottom,
     isTopDismissible,
-    topToastRef,
-    isBottomRef,
-    isDismissibleRef,
+    topToastMutable,
+    isBottomMutable,
+    isDismissibleMutable,
   };
 };

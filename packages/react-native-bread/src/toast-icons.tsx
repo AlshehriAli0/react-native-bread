@@ -42,10 +42,7 @@ export const AnimatedIcon = memo(
     const progress = useSharedValue(0);
 
     useEffect(() => {
-      progress.value = withTiming(1, {
-        duration: ICON_ANIMATION_DURATION,
-        easing: Easing.out(Easing.back(1.5)),
-      });
+      progress.set(withTiming(1, { duration: ICON_ANIMATION_DURATION, easing: Easing.out(Easing.back(1.5)) }));
     }, [progress]);
 
     const style = useAnimatedStyle(() => ({

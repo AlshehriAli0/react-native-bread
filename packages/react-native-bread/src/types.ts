@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { TextStyle, ViewStyle } from "react-native";
+import type { SharedValue } from "react-native-reanimated";
 
 export type ToastType = "success" | "error" | "info" | "loading";
 
@@ -148,9 +149,9 @@ export interface PromiseResult<T> {
 
 export interface TopToastRef {
   slot: {
-    progress: { value: number };
-    translationY: { value: number };
-    stackIndex: { value: number };
+    progress: SharedValue<number>;
+    translationY: SharedValue<number>;
+    stackIndex: SharedValue<number>;
   };
   dismiss: () => void;
 }

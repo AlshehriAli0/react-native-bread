@@ -19,6 +19,7 @@ An extremely lightweight, opinionated toast component for React Native.
 - **RTL support** - code-level RTL for when you're not using native RTL (`I18nManager`)
 - Completely customizable - colors, icons, styles, animations
 - Full Expo compatibility
+- **React Compiler compatible** - uses `.set()` / `.value` API for shared values
 
 
 
