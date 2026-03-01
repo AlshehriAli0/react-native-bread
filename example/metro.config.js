@@ -2,8 +2,8 @@ const { getDefaultConfig } = require("expo/metro-config");
 const path = require("node:path");
 
 const projectRoot = __dirname;
-const workspaceRoot = path.resolve(projectRoot, "../..");
-const packageRoot = path.resolve(workspaceRoot, "packages/react-native-bread");
+const workspaceRoot = path.resolve(projectRoot, "..");
+const packageRoot = path.resolve(workspaceRoot, "package");
 const packageSrc = path.resolve(packageRoot, "src");
 
 const config = getDefaultConfig(projectRoot);

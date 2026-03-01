@@ -30,15 +30,8 @@ import { useToastState } from "./use-toast-state";
 
 export const ToastContainer = () => {
   const { top, bottom } = useSafeAreaInsets();
-  const {
-    visibleToasts,
-    theme,
-    toastsWithIndex,
-    isBottom,
-    topToastMutable,
-    isBottomMutable,
-    isDismissibleMutable,
-  } = useToastState();
+  const { visibleToasts, theme, toastsWithIndex, isBottom, topToastMutable, isBottomMutable, isDismissibleMutable } =
+    useToastState();
 
   const shouldDismiss = useSharedValue(false);
 

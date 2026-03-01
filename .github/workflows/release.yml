@@ -30,13 +30,13 @@ jobs:
         with:
           node-version: 20
       - run: npm install -g npm@latest
-      - run: bun install --frozen-lockfile --ignore-scripts
+      - run: bun install --frozen-lockfile
       - name: Configure Git
         run: |
           git config user.name "${GITHUB_ACTOR}"
           git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
       - name: Release
-        working-directory: packages/react-native-bread
+        working-directory: package
         run: bun run release --ci --increment ${{ inputs.version }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

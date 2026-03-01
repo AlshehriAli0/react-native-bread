@@ -31,7 +31,7 @@
     "reanimated"
   ],
   "scripts": {
-    "prepack": "cp ../../README.md ./README.md",
+    "prepack": "cp ../README.md ./README.md",
     "postpack": "rm ./README.md",
     "build": "bob build",
     "typecheck": "tsc --noEmit",
@@ -60,7 +60,7 @@
     "plugins": {
       "@release-it/conventional-changelog": {
         "preset": "conventionalcommits",
-        "infile": "../../CHANGELOG.md"
+        "infile": "../CHANGELOG.md"
       }
     }
   },
@@ -72,7 +72,7 @@
     "react-native-builder-bob": "^0.35.2",
     "react-native-gesture-handler": "~2.28.0",
     "react-native-reanimated": "~4.2.1",
-    "react-native-safe-area-context": "~5.4.0",
+    "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.16.0",
     "react-native-svg": "15.12.1",
     "react-native-worklets": "0.7.2",
