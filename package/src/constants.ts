@@ -20,4 +20,7 @@ export const DISMISS_VELOCITY_THRESHOLD = 300;
 export const STACK_OFFSET_PER_ITEM = 10;
 export const STACK_SCALE_PER_ITEM = 0.05;
 
+export const DEDUPLICATION_PULSE_DURATION = 300;
+export const DEDUPLICATION_SHAKE_DURATION = 400;
+
 export const EASING = Easing.bezier(0.25, 0.1, 0.25, 1.0);

@@ -15,6 +15,7 @@ export default function GlobalConfigScreen() {
   const [showCloseButton, setShowCloseButton] = useState(true);
   const [customStyle, setCustomStyle] = useState(true);
   const [rtl, setRtl] = useState(false);
+  const [deduplication, setDeduplication] = useState(true);
 
   const showToast = () => {
     toast.success("Hello!", "This toast uses the global config");
@@ -38,6 +39,7 @@ export default function GlobalConfigScreen() {
           rtl,
           offset: 8,
           defaultDuration: 4000,
+          deduplication,
           ...(customStyle && {
             toastStyle: {
               borderRadius: 30,
@@ -144,6 +146,14 @@ export default function GlobalConfigScreen() {
               <Text style={styles.optionDesc}>Right-to-left text direction</Text>
             </View>
             <Switch value={rtl} onValueChange={setRtl} />
+          </View>
+
+          <View style={styles.option}>
+            <View>
+              <Text style={styles.optionLabel}>Deduplication</Text>
+              <Text style={styles.optionDesc}>Pulse/shake on repeated toasts</Text>
+            </View>
+            <Switch value={deduplication} onValueChange={setDeduplication} />
           </View>
 
           <View style={styles.option}>

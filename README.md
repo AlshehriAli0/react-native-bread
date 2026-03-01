@@ -141,6 +141,7 @@ toast.success('Saved!', {
   style: { backgroundColor: '#fff' },
   dismissible: true,
   showCloseButton: true,
+  deduplication: false, // Opt out of deduplication for this toast
 });
 ```
 
@@ -202,9 +203,40 @@ Available options include:
 - **dismissible**: Allow swipe to dismiss
 - **showCloseButton**: Show X button
 - **defaultDuration**: Default display time in ms
+- **deduplication**: Prevent duplicate toasts (default: `true`, see below)
 - **colors**: Custom colors per toast type
 - **icons**: Custom icons per toast type
 - **toastStyle**, **titleStyle**, **descriptionStyle**: Global style overrides
+
+### Deduplication
+
+Deduplication is **enabled by default**. When the same toast is shown repeatedly (e.g., rapid button taps), it prevents stacking identical toasts. Instead, it resets the timer and plays a feedback animation:
+
+- **Non-error toasts**: subtle pulse (scale bump)
+- **Error toasts**: shake effect
+
+Disable globally:
+
+```tsx
+<BreadLoaf config={{ deduplication: false }} />
+```
+
+Or per-toast (overrides global config):
+
+```tsx
+// Opt out for a specific toast
+toast.info('New message', { deduplication: false });
+
+// Explicitly enable for a specific toast (redundant when global is on)
+toast.success('Liked!', { deduplication: true });
+```
+
+By default, a toast is considered a duplicate when it matches the **front toast** by title, type, and description. For stable matching across different content, provide an `id` — the existing toast's content will be updated:
+
+```tsx
+toast.success('Saved item 1', { deduplication: true, id: 'save-action' });
+toast.success('Saved item 2', { deduplication: true, id: 'save-action' }); // updates content, resets timer
+```
 
 ## API Reference
 

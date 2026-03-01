@@ -113,6 +113,30 @@ export default function CustomScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
+            style={[styles.button, { backgroundColor: "#f59e0b" }]}
+            onPress={() =>
+              toast.success("Liked!", {
+                description: "Tap again — it won't stack",
+                deduplication: true,
+              })
+            }
+          >
+            <Text style={styles.buttonText}>Deduplication (Pulse)</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: "#dc2626" }]}
+            onPress={() =>
+              toast.error("Rate limited", {
+                description: "Please wait before retrying",
+                deduplication: true,
+              })
+            }
+          >
+            <Text style={styles.buttonText}>Deduplication (Shake)</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
             style={[styles.button, { backgroundColor: "#8b5cf6" }]}
             onPress={() =>
               toast.custom(CustomToastContent, {

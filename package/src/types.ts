@@ -70,10 +70,14 @@ export interface ToastTheme {
   descriptionStyle: TextStyle;
   /** Default duration in ms for toasts (default: 4000) */
   defaultDuration: number;
+  /** When true, duplicate toasts reset the timer and play a feedback animation. Matches by title+type+description, or by `id` if provided. (default: true) */
+  deduplication: boolean;
 }
 
 /** Per-toast options for customizing individual toasts */
 export interface ToastOptions {
+  /** Stable key for deduplication. When set, toasts with the same `id` deduplicate and update the existing toast's content. Without an `id`, matching falls back to title+type+description against the front toast. */
+  id?: string;
   /** Description text */
   description?: string;
   /** Duration in ms (overrides default) */
@@ -96,6 +100,8 @@ export interface ToastOptions {
    * Receives props: { id, dismiss, type, isExiting }
    */
   customContent?: ReactNode | CustomContentRenderFn;
+  /** Enable deduplication for this toast (overrides global config). Plays a pulse animation for non-error toasts or a shake for errors. Use with `id` for stable matching across different content. */
+  deduplication?: boolean;
 }
 
 /** Configuration options for customizing toast behavior and appearance. All properties are optional. */
@@ -115,6 +121,7 @@ export interface Toast {
   duration: number;
   createdAt: number;
   isExiting?: boolean;
+  deduplicatedAt?: number;
   /** Per-toast style/icon overrides */
   options?: ToastOptions;
 }

@@ -46,8 +46,8 @@ export const AnimatedIcon = memo(
     }, [progress]);
 
     const style = useAnimatedStyle(() => ({
-      opacity: progress.value,
-      transform: [{ scale: 0.7 + progress.value * 0.3 }],
+      opacity: progress.get(),
+      transform: [{ scale: 0.7 + progress.get() * 0.3 }],
     }));
 
     return <Animated.View style={style}>{resolveIcon(type, color, custom, config)}</Animated.View>;

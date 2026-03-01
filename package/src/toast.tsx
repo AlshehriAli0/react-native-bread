@@ -1,10 +1,18 @@
-import { memo, useCallback, useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import Animated, { interpolate, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import Animated, {
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withTiming,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
 import {
+  DEDUPLICATION_PULSE_DURATION,
+  DEDUPLICATION_SHAKE_DURATION,
   DISMISS_THRESHOLD,
   DISMISS_VELOCITY_THRESHOLD,
   EASING,
@@ -22,7 +30,7 @@ import {
   SWIPE_EXIT_OFFSET,
 } from "./constants";
 import { CloseIcon } from "./icons";
-import { type AnimSlot, animationPool, getSlotIndex, releaseSlot, slotTrackers } from "./pool";
+import { type AnimSlot, animationPool, getSlotIndex, releaseSlot } from "./pool";
 import { AnimatedIcon, resolveIcon } from "./toast-icons";
 import { toastStore } from "./toast-store";
 import type { CustomContentRenderFn, ToastItemProps, TopToastRef } from "./types";
@@ -42,12 +50,12 @@ export const ToastContainer = () => {
     })
     .onUpdate(event => {
       "worklet";
-      if (!isDismissibleMutable.value) return;
-      const ref = topToastMutable.value;
+      if (!isDismissibleMutable.get()) return;
+      const ref = topToastMutable.get();
       if (!ref) return;
 
       const { slot } = ref;
-      const bottom = isBottomMutable.value;
+      const bottom = isBottomMutable.get();
       const rawY = event.translationY;
       const dismissDrag = bottom ? rawY : -rawY;
       const resistDrag = bottom ? -rawY : rawY;
@@ -70,17 +78,17 @@ export const ToastContainer = () => {
     })
     .onEnd(() => {
       "worklet";
-      if (!isDismissibleMutable.value) return;
-      const ref = topToastMutable.value;
+      if (!isDismissibleMutable.get()) return;
+      const ref = topToastMutable.get();
       if (!ref) return;
 
       const { slot } = ref;
-      const bottom = isBottomMutable.value;
-      if (shouldDismiss.value) {
+      const bottom = isBottomMutable.get();
+      if (shouldDismiss.get()) {
         slot.progress.set(withTiming(0, { duration: EXIT_DURATION, easing: EASING }));
         const exitOffset = bottom ? SWIPE_EXIT_OFFSET : -SWIPE_EXIT_OFFSET;
         slot.translationY.set(
-          withTiming(slot.translationY.value + exitOffset, { duration: EXIT_DURATION, easing: EASING })
+          withTiming(slot.translationY.get() + exitOffset, { duration: EXIT_DURATION, easing: EASING })
         );
         scheduleOnRN(ref.dismiss);
       } else {
@@ -122,7 +130,7 @@ export const ToastContainer = () => {
 const ToastItem = ({ toast, index, theme, position, isTopToast, registerTopToast }: ToastItemProps) => {
   const [slotIdx] = useState(() => getSlotIndex(toast.id));
   const slot = animationPool[slotIdx];
-  const tracker = slotTrackers[slotIdx];
+  const tracker = useRef({ wasExiting: false, prevIndex: 0, initialized: false });
 
   const isBottom = position === "bottom";
   const entryFromY = isBottom ? ENTRY_OFFSET : -ENTRY_OFFSET;
@@ -130,12 +138,14 @@ const ToastItem = ({ toast, index, theme, position, isTopToast, registerTopToast
 
   const [wasLoading, setWasLoading] = useState(toast.type === "loading");
   const [showIcon, setShowIcon] = useState(false);
+  const lastDeduplicatedAt = useRef(toast.deduplicatedAt);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: mount-only effect
   useEffect(() => {
     slot.progress.set(0);
     slot.translationY.set(0);
     slot.stackIndex.set(index);
+    slot.deduplication.set(0);
     slot.progress.set(withTiming(1, { duration: ENTRY_DURATION, easing: EASING }));
 
     const iconTimeout = setTimeout(() => setShowIcon(true), 50);
@@ -153,17 +163,17 @@ const ToastItem = ({ toast, index, theme, position, isTopToast, registerTopToast
   useEffect(() => {
     let loadingTimeout: ReturnType<typeof setTimeout> | null = null;
 
-    if (toast.isExiting && !tracker.wasExiting) {
-      tracker.wasExiting = true;
+    if (toast.isExiting && !tracker.current.wasExiting) {
+      tracker.current.wasExiting = true;
       slot.progress.set(withTiming(0, { duration: EXIT_DURATION, easing: EASING }));
       slot.translationY.set(withTiming(exitToY, { duration: EXIT_DURATION, easing: EASING }));
     }
 
-    if (tracker.initialized && index !== tracker.prevIndex) {
+    if (tracker.current.initialized && index !== tracker.current.prevIndex) {
       slot.stackIndex.set(withTiming(index, { duration: STACK_TRANSITION_DURATION, easing: EASING }));
     }
-    tracker.prevIndex = index;
-    tracker.initialized = true;
+    tracker.current.prevIndex = index;
+    tracker.current.initialized = true;
 
     if (toast.type === "loading") {
       setWasLoading(true);
@@ -175,6 +185,34 @@ const ToastItem = ({ toast, index, theme, position, isTopToast, registerTopToast
       registerTopToast({ slot: slot as AnimSlot, dismiss: dismissToast });
     }
 
+    if (toast.deduplicatedAt && toast.deduplicatedAt !== lastDeduplicatedAt.current) {
+      lastDeduplicatedAt.current = toast.deduplicatedAt;
+
+      if (toast.type === "error") {
+        const step = DEDUPLICATION_SHAKE_DURATION / 8;
+        slot.deduplication.set(0);
+        slot.deduplication.set(
+          withSequence(
+            withTiming(6, { duration: step }),
+            withTiming(-5, { duration: step }),
+            withTiming(4, { duration: step }),
+            withTiming(-3, { duration: step }),
+            withTiming(2, { duration: step }),
+            withTiming(-1, { duration: step }),
+            withTiming(0, { duration: step * 2 })
+          )
+        );
+      } else {
+        slot.deduplication.set(0);
+        slot.deduplication.set(
+          withSequence(
+            withTiming(1, { duration: DEDUPLICATION_PULSE_DURATION / 2, easing: EASING }),
+            withTiming(0, { duration: DEDUPLICATION_PULSE_DURATION / 2, easing: EASING })
+          )
+        );
+      }
+    }
+
     return () => {
       if (loadingTimeout) clearTimeout(loadingTimeout);
       if (isTopToast) registerTopToast(null);
@@ -183,38 +221,42 @@ const ToastItem = ({ toast, index, theme, position, isTopToast, registerTopToast
     toast.isExiting,
     index,
     slot,
-    tracker,
     exitToY,
     toast.type,
     wasLoading,
     isTopToast,
     registerTopToast,
     dismissToast,
+    toast.deduplicatedAt,
   ]);
 
   const shouldAnimateIcon = wasLoading && toast.type !== "loading";
+  const isErrorType = toast.type === "error";
 
   const animatedStyle = useAnimatedStyle(() => {
-    const baseTranslateY = interpolate(slot.progress.value, [0, 1], [entryFromY, 0]);
+    const baseTranslateY = interpolate(slot.progress.get(), [0, 1], [entryFromY, 0]);
     const stackOffsetY = isBottom
-      ? slot.stackIndex.value * STACK_OFFSET_PER_ITEM
-      : slot.stackIndex.value * -STACK_OFFSET_PER_ITEM;
-    const stackScale = 1 - slot.stackIndex.value * STACK_SCALE_PER_ITEM;
+      ? slot.stackIndex.get() * STACK_OFFSET_PER_ITEM
+      : slot.stackIndex.get() * -STACK_OFFSET_PER_ITEM;
+    const stackScale = 1 - slot.stackIndex.get() * STACK_SCALE_PER_ITEM;
 
-    const finalTranslateY = baseTranslateY + slot.translationY.value + stackOffsetY;
+    const finalTranslateY = baseTranslateY + slot.translationY.get() + stackOffsetY;
 
-    const progressOpacity = interpolate(slot.progress.value, [0, 1], [0, 1]);
-    const dismissDirection = isBottom ? slot.translationY.value : -slot.translationY.value;
+    const progressOpacity = interpolate(slot.progress.get(), [0, 1], [0, 1]);
+    const dismissDirection = isBottom ? slot.translationY.get() : -slot.translationY.get();
     const dragOpacity = dismissDirection > 0 ? interpolate(dismissDirection, [0, 130], [1, 0], "clamp") : 1;
     const opacity = progressOpacity * dragOpacity;
 
-    const dragScale = interpolate(Math.abs(slot.translationY.value), [0, 50], [1, 0.98], "clamp");
-    const scale = stackScale * dragScale;
+    const dedupVal = slot.deduplication.get();
+    const dragScale = interpolate(Math.abs(slot.translationY.get()), [0, 50], [1, 0.98], "clamp");
+    const pulseScale = isErrorType ? 1 : 1 + dedupVal * 0.03;
+    const scale = stackScale * dragScale * pulseScale;
+    const shakeTranslateX = isErrorType ? dedupVal : 0;
 
     return {
-      transform: [{ translateY: finalTranslateY }, { scale }],
+      transform: [{ translateY: finalTranslateY }, { translateX: shakeTranslateX }, { scale }],
       opacity,
-      zIndex: 1000 - Math.round(slot.stackIndex.value),
+      zIndex: 1000 - Math.round(slot.stackIndex.get()),
     };
   });
 
@@ -320,6 +362,7 @@ const MemoizedToastItem = memo(ToastItem, (prev, next) => {
     prev.toast.title === next.toast.title &&
     prev.toast.description === next.toast.description &&
     prev.toast.isExiting === next.toast.isExiting &&
+    prev.toast.deduplicatedAt === next.toast.deduplicatedAt &&
     prev.index === next.index &&
     prev.position === next.position &&
     prev.theme === next.theme &&

@@ -20,9 +20,15 @@ interface BreadLoafProps {
    *
    * @property position - Where toasts appear: `'top'` (default) or `'bottom'`
    * @property offset - Extra spacing from screen edge in pixels (default: `0`)
+   * @property rtl - Enable right-to-left layout (default: `false`)
    * @property stacking - Show multiple toasts stacked (default: `true`). When `false`, only one toast shows at a time
+   * @property maxStack - Maximum visible toasts when stacking (default: `3`)
+   * @property dismissible - Whether toasts can be swiped to dismiss (default: `true`)
+   * @property showCloseButton - Show close button on toasts (default: `true`)
    * @property defaultDuration - Default display time in ms (default: `4000`)
+   * @property deduplication - Deduplicate repeated toasts, resetting timer with pulse/shake animation (default: `true`)
    * @property colors - Customize colors per toast type (`success`, `error`, `info`, `loading`)
+   * @property icons - Custom icons per toast type
    * @property toastStyle - Style overrides for the toast container (borderRadius, shadow, padding, etc.)
    * @property titleStyle - Style overrides for the title text
    * @property descriptionStyle - Style overrides for the description text
