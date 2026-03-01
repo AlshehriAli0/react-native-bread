@@ -191,21 +191,25 @@ const ToastItem = ({ toast, index, theme, position, isTopToast, registerTopToast
       if (toast.type === "error") {
         const step = DEDUPLICATION_SHAKE_DURATION / 8;
         slot.deduplication.set(0);
-        slot.deduplication.set(withSequence(
-          withTiming(6, { duration: step }),
-          withTiming(-5, { duration: step }),
-          withTiming(4, { duration: step }),
-          withTiming(-3, { duration: step }),
-          withTiming(2, { duration: step }),
-          withTiming(-1, { duration: step }),
-          withTiming(0, { duration: step * 2 })
-        ));
+        slot.deduplication.set(
+          withSequence(
+            withTiming(6, { duration: step }),
+            withTiming(-5, { duration: step }),
+            withTiming(4, { duration: step }),
+            withTiming(-3, { duration: step }),
+            withTiming(2, { duration: step }),
+            withTiming(-1, { duration: step }),
+            withTiming(0, { duration: step * 2 })
+          )
+        );
       } else {
         slot.deduplication.set(0);
-        slot.deduplication.set(withSequence(
-          withTiming(1, { duration: DEDUPLICATION_PULSE_DURATION / 2, easing: EASING }),
-          withTiming(0, { duration: DEDUPLICATION_PULSE_DURATION / 2, easing: EASING })
-        ));
+        slot.deduplication.set(
+          withSequence(
+            withTiming(1, { duration: DEDUPLICATION_PULSE_DURATION / 2, easing: EASING }),
+            withTiming(0, { duration: DEDUPLICATION_PULSE_DURATION / 2, easing: EASING })
+          )
+        );
       }
     }
 

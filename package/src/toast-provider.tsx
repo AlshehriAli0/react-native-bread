@@ -26,7 +26,7 @@ interface BreadLoafProps {
    * @property dismissible - Whether toasts can be swiped to dismiss (default: `true`)
    * @property showCloseButton - Show close button on toasts (default: `true`)
    * @property defaultDuration - Default display time in ms (default: `4000`)
-   * @property deduplication - Deduplicate repeated toasts, resetting timer with pulse/shake animation (default: `false`)
+   * @property deduplication - Deduplicate repeated toasts, resetting timer with pulse/shake animation (default: `true`)
    * @property colors - Customize colors per toast type (`success`, `error`, `info`, `loading`)
    * @property icons - Custom icons per toast type
    * @property toastStyle - Style overrides for the toast container (borderRadius, shadow, padding, etc.)

@@ -70,7 +70,7 @@ export interface ToastTheme {
   descriptionStyle: TextStyle;
   /** Default duration in ms for toasts (default: 4000) */
   defaultDuration: number;
-  /** When true, duplicate toasts reset the timer and play a feedback animation. Matches by title+type+description, or by `id` if provided. (default: false) */
+  /** When true, duplicate toasts reset the timer and play a feedback animation. Matches by title+type+description, or by `id` if provided. (default: true) */
   deduplication: boolean;
 }
 

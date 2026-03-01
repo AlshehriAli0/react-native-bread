@@ -23,7 +23,7 @@ const DEFAULT_THEME: ToastTheme = {
   titleStyle: {},
   descriptionStyle: {},
   defaultDuration: 4000,
-  deduplication: false,
+  deduplication: true,
 };
 
 function mergeConfig(config: ToastConfig | undefined): ToastTheme {
@@ -114,7 +114,10 @@ class ToastStore {
       const frontToast = this.state.visibleToasts.find(t => !t.isExiting);
       const duplicate = deduplicationId
         ? this.state.visibleToasts.find(t => !t.isExiting && t.options?.id === deduplicationId)
-        : frontToast && frontToast.title === title && frontToast.type === type && frontToast.description === resolvedDescription
+        : frontToast &&
+            frontToast.title === title &&
+            frontToast.type === type &&
+            frontToast.description === resolvedDescription
           ? frontToast
           : undefined;
 
