@@ -1,12 +1,20 @@
 {
   "name": "react-native-bread",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "A lightweight toast library for React Native with premium feeling animations and complex gesture support",
   "main": "lib/commonjs/index.js",
   "module": "lib/module/index.js",
   "types": "lib/typescript/index.d.ts",
   "react-native": "lib/module/index.js",
-  "files": ["lib", "src", "!**/__tests__", "!**/__fixtures__", "!**/__mocks__", "!**/*.map", "README.md"],
+  "files": [
+    "lib",
+    "src",
+    "!**/__tests__",
+    "!**/__fixtures__",
+    "!**/__mocks__",
+    "!**/*.map",
+    "README.md"
+  ],
   "sideEffects": false,
   "repository": {
     "type": "git",
@@ -50,7 +58,9 @@
     "npm": {
       "publish": true,
       "skipChecks": true,
-      "publishArgs": ["--provenance --access public"]
+      "publishArgs": [
+        "--provenance --access public"
+      ]
     },
     "github": {
       "release": true
@@ -63,16 +73,46 @@
         "preset": {
           "name": "conventionalcommits",
           "types": [
-            { "type": "feat", "section": "Features" },
-            { "type": "fix", "section": "Bug Fixes" },
-            { "type": "perf", "section": "Performance" },
-            { "type": "refactor", "section": "Refactors" },
-            { "type": "docs", "section": "Documentation" },
-            { "type": "style", "section": "Styles" },
-            { "type": "chore", "section": "Chores" },
-            { "type": "test", "section": "Tests" },
-            { "type": "ci", "section": "CI" },
-            { "type": "build", "section": "Build" }
+            {
+              "type": "feat",
+              "section": "Features"
+            },
+            {
+              "type": "fix",
+              "section": "Bug Fixes"
+            },
+            {
+              "type": "perf",
+              "section": "Performance"
+            },
+            {
+              "type": "refactor",
+              "section": "Refactors"
+            },
+            {
+              "type": "docs",
+              "section": "Documentation"
+            },
+            {
+              "type": "style",
+              "section": "Styles"
+            },
+            {
+              "type": "chore",
+              "section": "Chores"
+            },
+            {
+              "type": "test",
+              "section": "Tests"
+            },
+            {
+              "type": "ci",
+              "section": "CI"
+            },
+            {
+              "type": "build",
+              "section": "Build"
+            }
           ]
         },
         "infile": "../CHANGELOG.md"
