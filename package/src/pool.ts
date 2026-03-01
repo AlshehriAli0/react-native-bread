@@ -8,23 +8,11 @@ export interface AnimSlot {
   deduplication: SharedValue<number>;
 }
 
-export interface SlotTracker {
-  wasExiting: boolean;
-  prevIndex: number;
-  initialized: boolean;
-}
-
 export const animationPool: AnimSlot[] = Array.from({ length: POOL_SIZE }, () => ({
   progress: makeMutable(0),
   translationY: makeMutable(0),
   stackIndex: makeMutable(0),
   deduplication: makeMutable(0),
-}));
-
-export const slotTrackers: SlotTracker[] = Array.from({ length: POOL_SIZE }, () => ({
-  wasExiting: false,
-  prevIndex: 0,
-  initialized: false,
 }));
 
 const slotAssignments = new Map<string, number>();
@@ -38,9 +26,6 @@ export const getSlotIndex = (toastId: string): number => {
     if (!usedSlots.has(i)) {
       slotAssignments.set(toastId, i);
       usedSlots.add(i);
-      slotTrackers[i].initialized = false;
-      slotTrackers[i].wasExiting = false;
-      slotTrackers[i].prevIndex = 0;
       return i;
     }
   }
@@ -52,8 +37,5 @@ export const releaseSlot = (toastId: string) => {
   if (idx !== undefined) {
     usedSlots.delete(idx);
     slotAssignments.delete(toastId);
-    slotTrackers[idx].initialized = false;
-    slotTrackers[idx].wasExiting = false;
-    slotTrackers[idx].prevIndex = 0;
   }
 };

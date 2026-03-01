@@ -30,7 +30,7 @@ import {
   SWIPE_EXIT_OFFSET,
 } from "./constants";
 import { CloseIcon } from "./icons";
-import { type AnimSlot, animationPool, getSlotIndex, releaseSlot, slotTrackers } from "./pool";
+import { type AnimSlot, animationPool, getSlotIndex, releaseSlot } from "./pool";
 import { AnimatedIcon, resolveIcon } from "./toast-icons";
 import { toastStore } from "./toast-store";
 import type { CustomContentRenderFn, ToastItemProps, TopToastRef } from "./types";
@@ -130,7 +130,7 @@ export const ToastContainer = () => {
 const ToastItem = ({ toast, index, theme, position, isTopToast, registerTopToast }: ToastItemProps) => {
   const [slotIdx] = useState(() => getSlotIndex(toast.id));
   const slot = animationPool[slotIdx];
-  const tracker = slotTrackers[slotIdx];
+  const tracker = useRef({ wasExiting: false, prevIndex: 0, initialized: false });
 
   const isBottom = position === "bottom";
   const entryFromY = isBottom ? ENTRY_OFFSET : -ENTRY_OFFSET;
@@ -163,17 +163,17 @@ const ToastItem = ({ toast, index, theme, position, isTopToast, registerTopToast
   useEffect(() => {
     let loadingTimeout: ReturnType<typeof setTimeout> | null = null;
 
-    if (toast.isExiting && !tracker.wasExiting) {
-      tracker.wasExiting = true;
+    if (toast.isExiting && !tracker.current.wasExiting) {
+      tracker.current.wasExiting = true;
       slot.progress.set(withTiming(0, { duration: EXIT_DURATION, easing: EASING }));
       slot.translationY.set(withTiming(exitToY, { duration: EXIT_DURATION, easing: EASING }));
     }
 
-    if (tracker.initialized && index !== tracker.prevIndex) {
+    if (tracker.current.initialized && index !== tracker.current.prevIndex) {
       slot.stackIndex.set(withTiming(index, { duration: STACK_TRANSITION_DURATION, easing: EASING }));
     }
-    tracker.prevIndex = index;
-    tracker.initialized = true;
+    tracker.current.prevIndex = index;
+    tracker.current.initialized = true;
 
     if (toast.type === "loading") {
       setWasLoading(true);
@@ -221,7 +221,6 @@ const ToastItem = ({ toast, index, theme, position, isTopToast, registerTopToast
     toast.isExiting,
     index,
     slot,
-    tracker,
     exitToY,
     toast.type,
     wasLoading,
