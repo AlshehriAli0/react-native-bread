@@ -13,7 +13,6 @@ function ToastContent() {
   );
 }
 
-
 interface BreadLoafProps {
   /**
    * Configuration for customizing toast behavior and appearance.
