@@ -77,10 +77,17 @@ export function BreadLoaf({ config }: BreadLoafProps) {
     };
   }, [config]);
 
-  // iOS: use FullWindowOverlay to render above native modals
+  // iOS: use FullWindowOverlay to render above native modals.
+  //
+  // We pass unstable_accessibilityContainerViewIsModal={false} so the overlay's
+  // native container does not set accessibilityViewIsModal=YES (its default).
+  // That flag makes accessibility snapshots — VoiceOver, XCUITest, and agentic
+  // UI tools — treat every sibling view (i.e. the entire app) as hidden, which
+  // breaks automated UI testing. A toast is transient and pointerEvents="box-none",
+  // so it should never trap or occlude the accessibility tree.
   if (Platform.OS === "ios") {
     return (
-      <FullWindowOverlay>
+      <FullWindowOverlay unstable_accessibilityContainerViewIsModal={false}>
         <ToastContent />
       </FullWindowOverlay>
     );
