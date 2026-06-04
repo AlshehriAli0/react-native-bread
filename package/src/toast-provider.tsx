@@ -5,9 +5,12 @@ import { ToastContainer } from "./toast";
 import { toastStore } from "./toast-store";
 import type { ToastConfig } from "./types";
 
+// StyleSheet.absoluteFill, not absoluteFillObject — the latter was removed in RN 0.85,
+// where spreading it silently no-ops and the container falls into normal flex flow
+// (zero-height at the bottom of the layout, pushing toasts offscreen).
 function ToastContent() {
   return (
-    <View style={styles.container} pointerEvents="box-none">
+    <View style={[StyleSheet.absoluteFill, styles.container]} pointerEvents="box-none">
       <ToastContainer />
     </View>
   );
@@ -134,7 +137,6 @@ export function ToastPortal() {
 
 const styles = StyleSheet.create({
   container: {
-    ...StyleSheet.absoluteFillObject,
     zIndex: 9999,
   },
 });
