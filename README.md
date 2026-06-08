@@ -1,6 +1,12 @@
 # React Native Bread 🍞
 
 An extremely lightweight, opinionated toast component for React Native.
+<p align="center">
+  <a href="https://www.npmjs.com/package/react-native-bread"><img src="https://img.shields.io/npm/v/react-native-bread" alt="npm version" /></a>
+  <a href="https://www.npmjs.com/package/react-native-bread"><img src="https://img.shields.io/npm/dm/react-native-bread" alt="npm downloads" /></a>
+  <a href="https://github.com/AlshehriAli0/react-native-bread/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/react-native-bread" alt="license" /></a>
+</p>
+
 
 ![demo](https://github.com/user-attachments/assets/860d9d19-66f4-4fc6-a992-2d161e2e8bad)
 
